@@ -138,6 +138,10 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
 * **Lock the screen to landscape while mirroring** — forces the device rotation and turns
   auto-rotate off for the session. Needs the *Modify system settings* special access; the
   previous auto-rotate setting is restored when mirroring stops.
+* **Car screen scaling** — how the mirrored screen is fitted into the map area. *Fit* shows the
+  whole phone screen with black bars; *Fill height* crops the sides (best full screen); *Fill
+  width* crops the top and bottom (best when a side panel narrows the area); *Fill* (the default)
+  crops to fill the whole area. Read by the renderer every frame, so it applies immediately.
 * **Control the phone from the car touchscreen** — forwards taps, pans (swipe/scroll) and
   pinch-to-zoom on the mirror to the phone through the app's accessibility service. Sideloaded
   apps need *Allow restricted settings* (Settings → Apps → MyCar → ⋮) before they can be switched
@@ -215,10 +219,10 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 ## Where to tweak
 
 * Frame rate — `FRAME_INTERVAL_MS` in `car/MirrorSurfaceCallback.kt` (33 ms ≈ 30 fps).
-* Scaling — `drawFrame()` in the same file. Currently `CONTAIN` (letterboxed, nothing
-  cropped). For `COVER` (fill, edges cropped), use `maxOf(...)` instead of `minOf(...)`.
-  Note a portrait phone screen in a landscape car area will always leave large black bars
-  unless you also rotate it.
+* Scaling — the **Car screen scaling** setting chooses between `FIT` and the `FILL_*` modes; the
+  transform itself is `computeDestination()` in `car/MirrorSurfaceCallback.kt`. Under *Fit* a
+  portrait phone screen in a landscape car area will always leave large black bars unless you
+  also rotate it.
 * Capture resolution — `realDisplaySize()` in `capture/ScreenMirrorService.kt`. Capping the
   long edge here is the cheapest way to cut CPU and memory if the mirror stutters.
 * Pan direction and feel — `PAN_SIGN`, `PAN_DISPATCH_MS`, `PAN_DURATION_MS` and `FLING_SECONDS` in

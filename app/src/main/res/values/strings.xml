@@ -9,6 +9,11 @@
     <string name="stop_mirroring">Stop mirroring</string>
     <string name="keep_screen_on">Keep the screen on while mirroring</string>
     <string name="lock_landscape">Lock the screen to landscape while mirroring</string>
+    <string name="scale_mode">Car screen scaling</string>
+    <string name="scale_fit">Fit: whole phone screen, with black bars</string>
+    <string name="scale_fill_height">Fill height: crop the sides (best full screen)</string>
+    <string name="scale_fill_width">Fill width: crop the top and bottom (best with a side panel)</string>
+    <string name="scale_fill">Fill: crop to fill the whole area</string>
     <string name="auto_start">Start automatically when Android Auto connects</string>
     <string name="auto_start_hint">Needs “Display over other apps” and the accessibility service below. Mirroring stops by itself when Android Auto disconnects.</string>
     <string name="start_app">Open an app when mirroring starts</string>

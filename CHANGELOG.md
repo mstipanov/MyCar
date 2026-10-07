@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.18
+- New "Car screen scaling" setting: Fit, Fill height (crop the sides), Fill width (crop the top and bottom) or Fill (crop to use the whole area); it applies while mirroring, no restart needed
+
 ## 1.17
 - If sharing stops on its own while Android Auto is connected (a phone call, a screen lock), MyCar now asks for it again and reopens the configured app
 

@@ -13,6 +13,7 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.car.app.SurfaceCallback
 import androidx.car.app.SurfaceContainer
+import com.example.mycar.ScaleMode
 import com.example.mycar.Settings
 import com.example.mycar.capture.FrameStore
 import com.example.mycar.touch.TouchInjectorService
@@ -29,9 +30,9 @@ import com.example.mycar.touch.TouchInjectorService
  *
  * The surface is not always fully visible: opening the media or assistant side panel shrinks
  * the area the map may use. The host reports that through [onVisibleAreaChanged] (and the more
- * conservative [onStableAreaChanged]), so the frame is letterboxed into the visible region
- * rather than the whole surface. Without this the mirror keeps its full size and the panel
- * simply covers part of it.
+ * conservative [onStableAreaChanged]), so the frame is fitted into the visible region rather
+ * than the whole surface. How it is fitted is the user's [ScaleMode]: [ScaleMode.FIT] shows the
+ * whole screen with black bars, the other modes scale it up and let the overflow be cropped.
  */
 class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
@@ -39,6 +40,9 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val sourceRect = Rect()
     private val destinationRect = RectF()
+
+    /** Scratch rect for the touch-mapping path, which must not clobber [destinationRect]. */
+    private val scratchRect = RectF()
 
     private var container: SurfaceContainer? = null
 
@@ -199,13 +203,14 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         handler.postDelayed(resetCursor, PAN_RESET_MS)
     }
 
-    /** Letterbox scale currently applied (surface pixels per captured phone pixel). */
+    /** Scale currently applied (surface pixels per captured phone pixel). */
     private fun pictureScale(): Float? {
         val surfaceContainer = container ?: return null
         val picture = FrameStore.pictureSize() ?: return null
         val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-        if (area.width() <= 0 || area.height() <= 0) return null
-        val scale = minOf(area.width().toFloat() / picture.x, area.height().toFloat() / picture.y)
+        computeDestination(area, picture.x, picture.y, scratchRect)
+        if (scratchRect.isEmpty) return null
+        val scale = scratchRect.width() / picture.x
         return if (scale > 0f) scale else null
     }
 
@@ -236,30 +241,48 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     }
 
     /**
+     * Fills [out] with where the [pictureWidth] x [pictureHeight] frame is drawn inside [area]
+     * under the user's [ScaleMode]. [ScaleMode.FIT] keeps the whole frame inside; the FILL modes
+     * scale it up so it covers the area and let the overflow be clipped. Empty when either the
+     * frame or the area is degenerate.
+     */
+    private fun computeDestination(area: Rect, pictureWidth: Int, pictureHeight: Int, out: RectF) {
+        out.setEmpty()
+        val areaWidth = area.width().toFloat()
+        val areaHeight = area.height().toFloat()
+        if (pictureWidth <= 0 || pictureHeight <= 0 || areaWidth <= 0f || areaHeight <= 0f) return
+
+        val scale = when (Settings.scaleMode(context)) {
+            ScaleMode.FIT -> minOf(areaWidth / pictureWidth, areaHeight / pictureHeight)
+            ScaleMode.FILL_HEIGHT -> areaHeight / pictureHeight
+            ScaleMode.FILL_WIDTH -> areaWidth / pictureWidth
+            ScaleMode.FILL -> maxOf(areaWidth / pictureWidth, areaHeight / pictureHeight)
+        }
+        val drawnWidth = pictureWidth * scale
+        val drawnHeight = pictureHeight * scale
+        val left = area.left + (areaWidth - drawnWidth) / 2f
+        val top = area.top + (areaHeight - drawnHeight) / 2f
+        out.set(left, top, left + drawnWidth, top + drawnHeight)
+    }
+
+    /**
      * Inverse of the transform in [drawFrame]: a point in surface pixels to a point in captured
-     * phone pixels. Null when the point falls in the letterbox bars (or nothing is captured yet),
-     * so a tap on the black surround is ignored rather than landing somewhere random.
+     * phone pixels. Null when the point falls outside the drawn picture (the black bars in
+     * [ScaleMode.FIT], or when nothing is captured yet), so a tap there is ignored rather than
+     * landing somewhere random.
      */
     private fun mapToPhone(x: Float, y: Float): PointF? {
         val surfaceContainer = container ?: return null
         val picture = FrameStore.pictureSize() ?: return null
 
         val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-        val areaWidth = area.width().toFloat()
-        val areaHeight = area.height().toFloat()
-        if (areaWidth <= 0f || areaHeight <= 0f) return null
+        computeDestination(area, picture.x, picture.y, scratchRect)
+        if (scratchRect.isEmpty) return null
+        if (!scratchRect.contains(x, y)) return null
 
-        val scale = minOf(areaWidth / picture.x, areaHeight / picture.y)
+        val scale = scratchRect.width() / picture.x
         if (scale <= 0f) return null
-
-        val drawnWidth = picture.x * scale
-        val drawnHeight = picture.y * scale
-        val left = area.left + (areaWidth - drawnWidth) / 2f
-        val top = area.top + (areaHeight - drawnHeight) / 2f
-
-        if (x < left || x > left + drawnWidth || y < top || y > top + drawnHeight) return null
-
-        return PointF((x - left) / scale, (y - top) / scale)
+        return PointF((x - scratchRect.left) / scale, (y - scratchRect.top) / scale)
     }
 
     private fun drawFrame() {
@@ -289,20 +312,13 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             try {
                 canvas.drawColor(Color.BLACK)
 
-                // Letterbox the phone's aspect ratio inside the area the host allows us.
-                // Anything else would either distort the picture or crop off part of the screen.
-                val scale = minOf(
-                    areaWidth.toFloat() / pictureWidth,
-                    areaHeight.toFloat() / pictureHeight
-                )
-                val drawnWidth = pictureWidth * scale
-                val drawnHeight = pictureHeight * scale
-                val left = area.left + (areaWidth - drawnWidth) / 2f
-                val top = area.top + (areaHeight - drawnHeight) / 2f
-
-                sourceRect.set(0, 0, pictureWidth, pictureHeight)
-                destinationRect.set(left, top, left + drawnWidth, top + drawnHeight)
-                canvas.drawBitmap(bitmap, sourceRect, destinationRect, paint)
+                // Fit the frame into the area the host allows us, per the user's scale mode.
+                // The FILL modes deliberately overdraw the area; the canvas clips the overflow.
+                computeDestination(area, pictureWidth, pictureHeight, destinationRect)
+                if (!destinationRect.isEmpty) {
+                    sourceRect.set(0, 0, pictureWidth, pictureHeight)
+                    canvas.drawBitmap(bitmap, sourceRect, destinationRect, paint)
+                }
             } finally {
                 try {
                     surface.unlockCanvasAndPost(canvas)

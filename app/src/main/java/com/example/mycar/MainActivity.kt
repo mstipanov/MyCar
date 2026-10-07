@@ -15,6 +15,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ListView
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -102,6 +103,26 @@ class MainActivity : AppCompatActivity() {
             }
         }
         lockLandscapeView.isChecked = Settings.lockLandscape(this)
+
+        // Scaling is read by the renderer every frame, so a change here applies immediately.
+        val scaleGroup = findViewById<RadioGroup>(R.id.scale_group)
+        scaleGroup.check(
+            when (Settings.scaleMode(this)) {
+                ScaleMode.FIT -> R.id.scale_fit
+                ScaleMode.FILL_HEIGHT -> R.id.scale_fill_height
+                ScaleMode.FILL_WIDTH -> R.id.scale_fill_width
+                ScaleMode.FILL -> R.id.scale_fill
+            }
+        )
+        scaleGroup.setOnCheckedChangeListener { _, checkedId ->
+            val mode = when (checkedId) {
+                R.id.scale_fit -> ScaleMode.FIT
+                R.id.scale_fill_height -> ScaleMode.FILL_HEIGHT
+                R.id.scale_fill_width -> ScaleMode.FILL_WIDTH
+                else -> ScaleMode.FILL
+            }
+            Settings.setScaleMode(this, mode)
+        }
 
         accessibilityButton = findViewById(R.id.accessibility_settings)
         accessibilityButton.setOnClickListener { openAccessibilitySettings() }

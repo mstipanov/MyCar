@@ -12,6 +12,7 @@ object Settings {
     const val KEY_AUTO_START = "autoStart"
     const val KEY_START_APP_PACKAGE = "startAppPackage"
     const val KEY_START_APP_LABEL = "startAppLabel"
+    const val KEY_SCALE_MODE = "scaleMode"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
@@ -42,6 +43,19 @@ object Settings {
 
     fun setLockLandscape(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_LOCK_LANDSCAPE, enabled).apply()
+    }
+
+    /**
+     * How the mirrored screen is scaled into the car's map area. The renderer reads this every
+     * frame, so changing it takes effect immediately and does not restart capture.
+     */
+    fun scaleMode(context: Context): ScaleMode {
+        val stored = prefs(context).getString(KEY_SCALE_MODE, null)
+        return ScaleMode.entries.firstOrNull { it.name == stored } ?: ScaleMode.FILL
+    }
+
+    fun setScaleMode(context: Context, mode: ScaleMode) {
+        prefs(context).edit().putString(KEY_SCALE_MODE, mode.name).apply()
     }
 
     /**
@@ -88,4 +102,22 @@ object Settings {
     /** The prefs instance, so the mirror service can listen for changes live. */
     fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+}
+
+/**
+ * How a captured phone frame is fitted into the car's map area. The default [FILL] crops to use
+ * the whole area; [FIT] keeps the phone's aspect ratio and letterboxes instead.
+ */
+enum class ScaleMode {
+    /** Show the whole screen, letterboxed — the phone's aspect ratio is kept. */
+    FIT,
+
+    /** Fill the area's height and crop the sides. Best on a full-screen (wide) car area. */
+    FILL_HEIGHT,
+
+    /** Fill the area's width and crop the top and bottom. Best when a side panel narrows it. */
+    FILL_WIDTH,
+
+    /** Fill the area completely, cropping whichever side overflows. Uses all the space. */
+    FILL,
 }

@@ -61,6 +61,43 @@
             android:layout_height="wrap_content"
             android:text="@string/lock_landscape" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/scale_mode"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/scale_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/scale_fit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/scale_fit" />
+
+            <RadioButton
+                android:id="@+id/scale_fill_height"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/scale_fill_height" />
+
+            <RadioButton
+                android:id="@+id/scale_fill_width"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/scale_fill_width" />
+
+            <RadioButton
+                android:id="@+id/scale_fill"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/scale_fill" />
+        </RadioGroup>
+
         <CheckBox
             android:id="@+id/auto_start"
             android:layout_width="match_parent"

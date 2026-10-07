@@ -111,6 +111,11 @@ installed one. The base URL is baked in per build type: stable `https://mycar.st
 `https://mycar-beta.sting.hr` (`UPDATE_BASE_URL` in `app/build.gradle.kts`). That endpoint is
 served outside this repository and is unaffected by GitHub Releases.
 
+The **page** at `https://mycar.sting.hr` (and `/index.html`) redirects to the GitHub Releases
+page. Only the updater endpoints (`/version`, `/apk/*`) stay on that host; the redirect is served
+both by the distributor's `app.mycar.redirect` and by a Cloudflare edge redirect rule (needed
+because Cloudflare Access protects `/`).
+
 - `response.versionCode <= installedCode` → up to date (no download offered).
 - A dismissed version is remembered, so re-publishing the **same** `versionCode` never re-prompts.
 

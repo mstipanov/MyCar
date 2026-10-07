@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.17
+- If sharing stops on its own while Android Auto is connected (a phone call, a screen lock), MyCar now asks for it again and reopens the configured app
+
 ## 1.16
 - Mirroring now stops by itself when Android Auto disconnects (with auto-start on), instead of keeping the capture running against a car that is gone
 

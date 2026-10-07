@@ -44,7 +44,8 @@ navigation, point-of-interest and weather apps get:
 * `car/MirrorSurfaceCallback` — the "map". Runs a 30 fps loop that letterboxes the newest
   captured frame into the surface.
 * `capture/ScreenMirrorService` — foreground service that owns the `MediaProjection` and
-  feeds `FrameStore`.
+  feeds `FrameStore`. If the system ends capture by itself while Android Auto is connected, it
+  asks for it again and reopens the chosen app.
 * `capture/FrameStore` — single-slot, lock-protected hand-off so no bitmap is allocated
   per frame.
 * `MainActivity` — the phone screen where capture permission is granted and the settings live.
@@ -126,8 +127,9 @@ the same). Then:
    the navigation launcher; that slot stays free for Google Maps/Waze.
 
 Capture survives the phone screen turning off, but **not** the phone being locked or the
-projection being revoked; you must approve again each time capture is stopped (hands-free start
-handles that re-approval by itself).
+projection being revoked. When capture stops on its own while Android Auto is still connected —
+a phone call or a lock, say — MyCar asks for it again by itself and reopens the chosen app, as
+long as *Display over other apps* is granted (see [Hands-free start](#hands-free-start)).
 
 ## Phone settings
 
@@ -156,7 +158,9 @@ When **Start automatically when Android Auto connects** is on, a small foregroun
 (`auto/CarConnectionWatcher`) subscribes to Android Auto's connection feed. The moment the car
 connects it launches the phone UI, which asks for capture; the app then presses Share for you.
 When the car disconnects it stops capture again, so nothing keeps mirroring to a car that is
-gone. Three pieces make the connect side work, in order of importance:
+gone. If capture stops by itself while the car is still connected — a phone call, a screen lock
+— MyCar asks for it again and reopens the chosen app once the phone is awake and unlocked. Three
+pieces make the connect side work, in order of importance:
 
 1. **Display over other apps** (`SYSTEM_ALERT_WINDOW`) — required, because the app is in the
    background when the car connects and Android otherwise blocks it from starting the consent

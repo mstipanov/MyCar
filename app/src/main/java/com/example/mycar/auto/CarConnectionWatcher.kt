@@ -70,11 +70,7 @@ class CarConnectionWatcher : Service() {
     }
 
     private fun queryConnection() {
-        val state = runCatching {
-            contentResolver.query(CONNECTION_URI, arrayOf(COLUMN_STATE), null, null, null)
-                ?.use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else CONNECTION_NOT_CONNECTED }
-        }.getOrNull() ?: CONNECTION_NOT_CONNECTED
-        onConnectionState(state)
+        onConnectionState(connectionState(this))
     }
 
     private fun onConnectionState(state: Int) {
@@ -154,6 +150,23 @@ class CarConnectionWatcher : Service() {
 
         private val CONNECTION_URI: Uri =
             Uri.Builder().scheme("content").authority("androidx.car.app.connection").build()
+
+        /**
+         * Android Auto's live connection state, or [CONNECTION_NOT_CONNECTED] when it cannot be
+         * read. Shared with the mirror service, which uses it to decide whether a capture that the
+         * system stopped on its own should be asked for again.
+         */
+        fun connectionState(context: Context): Int = runCatching {
+            context.contentResolver
+                .query(CONNECTION_URI, arrayOf(COLUMN_STATE), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getInt(0) else CONNECTION_NOT_CONNECTED
+                }
+        }.getOrNull() ?: CONNECTION_NOT_CONNECTED
+
+        /** Whether Android Auto is currently projecting, i.e. the car is showing us. */
+        fun isProjecting(context: Context): Boolean =
+            connectionState(context) == CONNECTION_PROJECTION
 
         /** Idempotently starts the watcher. */
         fun start(context: Context) {

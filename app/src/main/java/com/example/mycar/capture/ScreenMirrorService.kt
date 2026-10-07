@@ -1,6 +1,7 @@
 package com.example.mycar.capture
 
 import android.app.Activity
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -26,9 +27,11 @@ import android.util.Log
 import android.view.Display
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.example.mycar.MainActivity
 import com.example.mycar.R
 import com.example.mycar.RotationLock
 import com.example.mycar.Settings
+import com.example.mycar.auto.CarConnectionWatcher
 
 /**
  * Mirrors this device's own display into [FrameStore] as fast as the screen changes.
@@ -55,6 +58,9 @@ class ScreenMirrorService : Service() {
     /** Size the current [virtualDisplay] and [imageReader] were created with. */
     private var captureSize: Point? = null
 
+    /** True while a re-request for a capture the system stopped on its own is being waited on. */
+    private var recoveryPending = false
+
     /** Held while mirroring if the user asked for the screen to stay on. */
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -69,9 +75,10 @@ class ScreenMirrorService : Service() {
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
-            // The user revoked capture, or the system stopped it (screen off, device lock).
+            // The user revoked capture, or the system stopped it (screen off, device lock, a call).
             release(stoppedByProjection = true)
             stopSelf()
+            scheduleRecovery()
         }
 
         /**
@@ -180,6 +187,63 @@ class ScreenMirrorService : Service() {
             runCatching { startActivity(launch) }
                 .onFailure { Log.w(TAG, "Could not open $packageName", it) }
         }, START_APP_DELAY_MS)
+    }
+
+    /**
+     * Capture was ended by the system rather than by the user: the screen locked, the phone went
+     * to sleep, or a call came in. Mirroring is meant to follow the car, so ask for capture again
+     * and let [openStartApp] reopen the configured app. A phone call usually stops capture while
+     * the screen is off or the phone is locked, when the consent prompt could not be answered, so
+     * keep retrying until the phone is awake and unlocked. Give up if Android Auto goes away
+     * first, or after [RECOVERY_ATTEMPTS] tries.
+     */
+    private fun scheduleRecovery() {
+        if (recoveryPending) return
+        val appContext = applicationContext
+        if (!CarConnectionWatcher.isProjecting(appContext)) return
+        // Needed to bring the consent screen up while MyCar is in the background.
+        if (!android.provider.Settings.canDrawOverlays(appContext)) return
+
+        recoveryPending = true
+        val handler = Handler(appContext.mainLooper)
+        val attempt = object : Runnable {
+            private var attemptsLeft = RECOVERY_ATTEMPTS
+
+            override fun run() {
+                val stillStopped = !ScreenMirrorService.isRunning
+                if (!stillStopped || !CarConnectionWatcher.isProjecting(appContext)) {
+                    recoveryPending = false
+                    return
+                }
+                if (readyForConsent(appContext)) {
+                    recoveryPending = false
+                    Log.i(TAG, "Capture stopped under Android Auto; asking for it again")
+                    runCatching {
+                        appContext.startActivity(
+                            Intent(appContext, MainActivity::class.java)
+                                .putExtra(MainActivity.EXTRA_AUTO_START, true)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }.onFailure { Log.w(TAG, "Could not reopen the capture prompt", it) }
+                    return
+                }
+                if (--attemptsLeft <= 0) {
+                    recoveryPending = false
+                    return
+                }
+                handler.postDelayed(this, RECOVERY_RETRY_MS)
+            }
+        }
+        handler.postDelayed(attempt, RECOVERY_RETRY_MS)
+    }
+
+    /** Whether the capture consent prompt could actually be shown and answered right now. */
+    private fun readyForConsent(context: Context): Boolean {
+        val power = context.getSystemService(PowerManager::class.java)
+        val keyguard = context.getSystemService(KeyguardManager::class.java)
+        val interactive = power?.isInteractive ?: true
+        val locked = keyguard?.isKeyguardLocked ?: false
+        return interactive && !locked
     }
 
     /** Creates the initial reader + virtual display pair. Only ever called once per projection. */
@@ -410,6 +474,12 @@ class ScreenMirrorService : Service() {
 
         /** Grace period before opening the chosen app, so the capture prompt can close first. */
         private const val START_APP_DELAY_MS = 800L
+
+        /** Delay before a recovery attempt, and between attempts, after the system stops capture. */
+        private const val RECOVERY_RETRY_MS = 2_000L
+
+        /** How often recovery waits for the phone to wake and unlock before giving up (~10 min). */
+        private const val RECOVERY_ATTEMPTS = 300
 
         /** Whether a capture is currently live. Read by the phone UI. */
         @Volatile

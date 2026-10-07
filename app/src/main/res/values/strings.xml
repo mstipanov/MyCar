@@ -1,0 +1,41 @@
+<resources>
+    <string name="app_name">MyCar</string>
+
+    <string name="status_idle">Not mirroring.</string>
+    <string name="status_running">Mirroring this device\'s screen to the car.</string>
+    <string name="status_declined">Screen capture permission was declined.</string>
+
+    <string name="start_mirroring">Start mirroring</string>
+    <string name="stop_mirroring">Stop mirroring</string>
+    <string name="keep_screen_on">Keep the screen on while mirroring</string>
+    <string name="lock_landscape">Lock the screen to landscape while mirroring</string>
+    <string name="auto_start">Start automatically when Android Auto connects</string>
+    <string name="auto_start_hint">Needs “Display over other apps” and the accessibility service below.</string>
+    <string name="start_app">Open an app when mirroring starts</string>
+    <string name="start_app_selected">Open when mirroring starts: %1$s</string>
+    <string name="start_app_none">Don\'t open any app</string>
+    <string name="start_app_search">Search apps</string>
+    <string name="touch_control">Control the phone from the car touchscreen</string>
+    <string name="open_accessibility_settings">Enable touch control (Accessibility settings)</string>
+    <string name="touch_control_enabled">Touch control is enabled</string>
+
+    <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
+
+    <string name="mirror_notification_channel">Screen mirroring</string>
+    <string name="mirror_notification_title">Mirroring to car display</string>
+    <string name="mirror_notification_text">Capturing this device\'s screen for Android Auto.</string>
+
+    <string name="watcher_notification_channel">Android Auto auto-start</string>
+    <string name="watcher_notification_title">Ready to start when Android Auto connects</string>
+    <string name="watcher_notification_text">Mirroring starts by itself when your car connects.</string>
+
+    <string name="touch_service_description">Lets MyCar tap the phone when you touch the mirror on the car screen, and press Share on the system screen-capture prompt for hands-free start. It only reads that system prompt.</string>
+
+    <string name="check_updates">Check for updates</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_up_to_date">You are on the latest version (%1$s).</string>
+    <string name="update_unreachable">Could not reach the update server.</string>
+    <string name="update_downloading">Downloading MyCar %1$s… %2$d%%</string>
+    <string name="update_ready">Downloaded MyCar %1$s. Opening the installer…</string>
+    <string name="update_failed">Update failed: %1$s</string>
+</resources>

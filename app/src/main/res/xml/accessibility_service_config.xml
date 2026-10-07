@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Accessibility service for (a) tapping the phone from the car touchscreen and (b) accepting the
+    system screen-capture prompt for hands-free start. canPerformGestures enables
+    dispatchGesture(); canRetrieveWindowContent is needed to find and press Share on the prompt,
+    and the code only ever reads SystemUI's projection window.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canPerformGestures="true"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/touch_service_description"
+    android:notificationTimeout="100" />

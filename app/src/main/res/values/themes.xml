@@ -1,0 +1,8 @@
+<resources>
+    <!--
+        Must be an AppCompat theme: MainActivity extends AppCompatActivity, which throws
+        "You need to use a Theme.AppCompat theme (or descendant) with this activity" on boot
+        when the theme is a plain framework theme such as android:Theme.Material.*.
+    -->
+    <style name="Theme.MyCar" parent="Theme.AppCompat.Light.DarkActionBar"/>
+</resources>

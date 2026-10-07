@@ -1,0 +1,13 @@
+<!-- Notification icon for the media-projection foreground service. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2,4h20v13H2z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M8,18h8v2H8z" />
+</vector>

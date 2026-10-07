@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Declares which Android Auto capabilities this app supports. Any app built with the
+    Android for Cars App Library must declare the "template" capability here, otherwise
+    Android Auto will not list it.
+-->
+<automotiveApp>
+    <uses name="template" />
+</automotiveApp>

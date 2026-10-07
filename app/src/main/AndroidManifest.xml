@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        Android Auto: the template below is what gives us a raw drawing Surface, and
+        ACCESS_SURFACE is what unlocks it. Both are required for the mirror to have anywhere to
+        render.
+
+        NAVIGATION_TEMPLATES even though this app declares the WEATHER category: the permission
+        is what gates NavigationTemplate, and NavigationTemplate is the only template that gives
+        the map the whole screen (MapWithContentTemplate always splits it with a content pane).
+        The category decides where the app is listed - and staying out of the car's single
+        navigation slot is the whole point here, so Maps/Waze keep it.
+    -->
+    <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES" />
+    <uses-permission android:name="androidx.car.app.ACCESS_SURFACE" />
+
+    <!-- Screen capture. MediaProjection must run inside a foreground service on API 34+. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Auto-start: CarConnectionWatcher is a specialUse foreground service; starting the consent
+         screen from the background needs "Display over other apps"; the watcher comes back after
+         a reboot. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- "Keep screen on while mirroring" holds a SCREEN_BRIGHT_WAKE_LOCK. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- "Lock landscape while mirroring" writes the system rotation settings. Granted through
+         the "Modify system settings" special access, not at install time. -->
+    <uses-permission
+            android:name="android.permission.WRITE_SETTINGS"
+            tools:ignore="ProtectedPermissions" />
+
+    <!-- In-app updater: talks to mycar.sting.hr and hands the APK to the system installer. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- Android 11+ package visibility: without this, queryIntentActivities() only returns a
+         handful of apps, so the "open an app when mirroring starts" picker would be almost empty.
+         This grants sight of launcher apps only. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <!--
+        NOTE: no android.hardware.type.automotive feature here on purpose. Declaring it would
+        make this an app for a car's built-in head unit, which cannot see the phone's screen.
+        This is a phone app that is projected into the car.
+    -->
+    <application
+            android:allowBackup="true"
+            android:label="@string/app_name"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.MyCar">
+
+        <!-- Tells Android Auto this app uses the Car App Library templates. -->
+        <meta-data
+                android:name="com.google.android.gms.car.application"
+                android:resource="@xml/automotive_app_desc" />
+
+        <!--
+            Must live on <application>, not on the CarAppService: Car App Library's
+            AppInfo reads it from ApplicationInfo.metaData and throws
+            "Min API level not declared in manifest (androidx.car.app.minCarApiLevel)"
+            at runtime if it is missing, which crashes the session in the car.
+        -->
+        <meta-data
+                android:name="androidx.car.app.minCarApiLevel"
+                android:value="1" />
+
+        <!-- Phone-side UI: where the MediaProjection consent prompt is triggered. -->
+        <activity
+                android:name=".MainActivity"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Registers this app as a WEATHER app in Android Auto, not a navigation app: only one
+             app can hold the car's navigation slot, so as a nav app the mirror would push Google
+             Maps/Waze out of it. Weather apps can still own a Surface (MapWithContentTemplate). -->
+        <service
+                android:name=".car.MirrorCarAppService"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.WEATHER" />
+            </intent-filter>
+        </service>
+
+        <!-- Grabs the phone's own display into FrameStore for the car surface to draw. -->
+        <service
+                android:name=".capture.ScreenMirrorService"
+                android:exported="false"
+                android:foregroundServiceType="mediaProjection" />
+
+        <!-- Watches for Android Auto connecting so mirroring can start by itself. -->
+        <service
+                android:name=".auto.CarConnectionWatcher"
+                android:exported="false"
+                android:foregroundServiceType="specialUse">
+            <property
+                    android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                    android:value="Watches for Android Auto connection changes to start screen mirroring automatically." />
+        </service>
+
+        <!-- Brings the watcher back after a reboot. -->
+        <receiver
+                android:name=".auto.BootReceiver"
+                android:exported="true"
+                android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Injects taps/swipes so the car touchscreen can drive the phone. Gesture-only; the
+             user enables it by hand in Settings -> Accessibility. -->
+        <service
+                android:name=".touch.TouchInjectorService"
+                android:exported="true"
+                android:label="@string/app_name"
+                android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                    android:name="android.accessibilityservice"
+                    android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Exposes the downloaded APK in cache/updates to the system package installer. -->
+        <provider
+                android:name="androidx.core.content.FileProvider"
+                android:authorities="${applicationId}.fileprovider"
+                android:exported="false"
+                android:grantUriPermissions="true">
+            <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

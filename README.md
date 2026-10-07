@@ -52,7 +52,8 @@ navigation, point-of-interest and weather apps get:
   mirror (so the car touchscreen can drive the phone) and presses Share on the system capture
   prompt for hands-free start.
 * `auto/CarConnectionWatcher` / `auto/BootReceiver` — a quiet foreground service that starts
-  mirroring the moment Android Auto connects, and comes back after a reboot.
+  mirroring the moment Android Auto connects and stops it when the car disconnects, and comes
+  back after a reboot.
 * `Settings.kt` / `RotationLock.kt` — the app's stored options (keep screen on, lock landscape,
   touch control, auto-start) and the system-rotation helper behind the landscape lock.
 
@@ -142,7 +143,8 @@ handles that re-approval by itself).
   position from the car, so it rides a virtual finger and is best-effort (see
   [Caveats](#caveats)).
 * **Start automatically when Android Auto connects** — the mirror appears without touching the
-  phone. See [Hands-free start](#hands-free-start).
+  phone, and mirroring stops by itself once Android Auto disconnects. See
+  [Hands-free start](#hands-free-start).
 * **Open an app when mirroring starts** — pick any installed app (navigation, music, …) and MyCar
   opens it as soon as the mirror is live, so the car screen shows that app instead of the phone's
   home screen. When it fires from the background it uses the same *Display over other apps*
@@ -153,7 +155,8 @@ handles that re-approval by itself).
 When **Start automatically when Android Auto connects** is on, a small foreground service
 (`auto/CarConnectionWatcher`) subscribes to Android Auto's connection feed. The moment the car
 connects it launches the phone UI, which asks for capture; the app then presses Share for you.
-Three pieces make this work, in order of importance:
+When the car disconnects it stops capture again, so nothing keeps mirroring to a car that is
+gone. Three pieces make the connect side work, in order of importance:
 
 1. **Display over other apps** (`SYSTEM_ALERT_WINDOW`) — required, because the app is in the
    background when the car connects and Android otherwise blocks it from starting the consent

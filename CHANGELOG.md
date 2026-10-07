@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.16
+- Mirroring now stops by itself when Android Auto disconnects (with auto-start on), instead of keeping the capture running against a car that is gone
+
 ## 1.15
 - The car screen can now drive more than taps: swipe to pan or scroll, and pinch to zoom
 - Pinch maps exactly to where you pinch; panning uses a virtual finger (the car only reports

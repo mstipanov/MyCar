@@ -10,7 +10,7 @@
     <string name="keep_screen_on">Keep the screen on while mirroring</string>
     <string name="lock_landscape">Lock the screen to landscape while mirroring</string>
     <string name="auto_start">Start automatically when Android Auto connects</string>
-    <string name="auto_start_hint">Needs “Display over other apps” and the accessibility service below.</string>
+    <string name="auto_start_hint">Needs “Display over other apps” and the accessibility service below. Mirroring stops by itself when Android Auto disconnects.</string>
     <string name="start_app">Open an app when mirroring starts</string>
     <string name="start_app_selected">Open when mirroring starts: %1$s</string>
     <string name="start_app_none">Don\'t open any app</string>
@@ -19,7 +19,7 @@
     <string name="open_accessibility_settings">Enable touch control (Accessibility settings)</string>
     <string name="touch_control_enabled">Touch control is enabled</string>
 
-    <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
+    <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects and stops when it disconnects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
 
     <string name="mirror_notification_channel">Screen mirroring</string>
     <string name="mirror_notification_title">Mirroring to car display</string>

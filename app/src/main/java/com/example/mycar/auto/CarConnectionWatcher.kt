@@ -21,14 +21,15 @@ import com.example.mycar.Settings
 import com.example.mycar.capture.ScreenMirrorService
 
 /**
- * Watches for Android Auto connecting so mirroring can start by itself, with no interaction.
+ * Watches Android Auto's connection state so mirroring follows the car, with no interaction.
  *
  * Android Auto publishes its connection state through a content provider and broadcasts
  * `CAR_CONNECTION_UPDATED` when it changes. Neither reaches an app that is not running, so this
  * has to be a (quiet) foreground service to survive between drives. On the transition to
  * "projecting" it launches [MainActivity] with [MainActivity.EXTRA_AUTO_START], which asks for
  * capture consent; that launch is only allowed from the background because the app holds
- * "Display over other apps" (`SYSTEM_ALERT_WINDOW`).
+ * "Display over other apps" (`SYSTEM_ALERT_WINDOW`). On the way back it stops mirroring, so
+ * capture never keeps running against a car that is no longer there.
  */
 class CarConnectionWatcher : Service() {
 
@@ -78,9 +79,16 @@ class CarConnectionWatcher : Service() {
 
     private fun onConnectionState(state: Int) {
         val connected = state == CONNECTION_PROJECTION
-        val rising = connected && !wasConnected
+        val was = wasConnected
         wasConnected = connected
-        if (!rising) return
+        when {
+            connected && !was -> startMirroring()
+            !connected && was -> stopMirroring()
+        }
+    }
+
+    /** Rising edge: the car started projecting, so bring mirroring up by itself. */
+    private fun startMirroring() {
         if (ScreenMirrorService.isRunning) return
         if (!Settings.autoStart(this)) return
 
@@ -95,6 +103,17 @@ class CarConnectionWatcher : Service() {
                 .putExtra(MainActivity.EXTRA_AUTO_START, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
+    }
+
+    /**
+     * Falling edge: the car stopped projecting. Capture left running would keep mirroring into a
+     * car that is gone (and keep the screen awake and landscape-locked), so stop it. Auto-start
+     * covers the next connection; Android asks for capture consent again when it comes back.
+     */
+    private fun stopMirroring() {
+        if (!ScreenMirrorService.isRunning) return
+        Log.i(TAG, "Android Auto disconnected; stopping mirroring")
+        ScreenMirrorService.stop(this)
     }
 
     private fun buildNotification(): android.app.Notification {

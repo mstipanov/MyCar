@@ -111,6 +111,11 @@ installed one. The base URL is baked in per build type: stable `https://mycar.st
 `https://mycar-beta.sting.hr` (`UPDATE_BASE_URL` in `app/build.gradle.kts`). That endpoint is
 served outside this repository and is unaffected by GitHub Releases.
 
+The distributor's MyCar stable channel serves `app/build/outputs/apk/release`, so it hands out the
+same **release-key-signed** APK as the GitHub Release — publish with `:app:assembleRelease`, never
+`:app:assembleDebug`. A debug-signed APK (or a debug-signed Smart Notify-style channel) cannot
+install over the release-signed app; Android rejects it with a signature mismatch.
+
 The **page** at `https://mycar.sting.hr` (and `/index.html`) redirects to the GitHub Releases
 page. Only the updater endpoints (`/version`, `/apk/*`) stay on that host; the redirect is served
 both by the distributor's `app.mycar.redirect` and by a Cloudflare edge redirect rule (needed

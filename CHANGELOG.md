@@ -1,5 +1,9 @@
 # MyCar
 
+## 1.19
+- New quick launch menu on the car screen: tap the mirror to bring up shortcuts for Google Maps, Waze and YouTube and open one on the phone; it hides again after a few seconds
+- New option "Show the quick launch menu on the car screen" (on by default)
+
 ## 1.18
 - New "Car screen scaling" setting: Fit, Fill height (crop the sides), Fill width (crop the top and bottom) or Fill (crop to use the whole area); it applies while mirroring, no restart needed
 

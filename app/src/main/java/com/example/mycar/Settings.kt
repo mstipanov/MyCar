@@ -13,6 +13,7 @@ object Settings {
     const val KEY_START_APP_PACKAGE = "startAppPackage"
     const val KEY_START_APP_LABEL = "startAppLabel"
     const val KEY_SCALE_MODE = "scaleMode"
+    const val KEY_QUICK_LAUNCH = "quickLaunch"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
@@ -56,6 +57,18 @@ object Settings {
 
     fun setScaleMode(context: Context, mode: ScaleMode) {
         prefs(context).edit().putString(KEY_SCALE_MODE, mode.name).apply()
+    }
+
+    /**
+     * Whether the car screen offers the quick launch drawer (Google Maps / Waze / YouTube). On by
+     * default; tapping the mirror reveals it. It is independent of touch control: the drawer is a
+     * car-screen overlay, while touch control decides whether other taps drive the phone.
+     */
+    fun quickLaunch(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_QUICK_LAUNCH, true)
+
+    fun setQuickLaunch(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_QUICK_LAUNCH, enabled).apply()
     }
 
     /**

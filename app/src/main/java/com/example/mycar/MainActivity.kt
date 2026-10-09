@@ -43,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var keepScreenOnView: CheckBox
     private lateinit var lockLandscapeView: CheckBox
     private lateinit var touchControlView: CheckBox
+    private lateinit var quickLaunchView: CheckBox
     private lateinit var autoStartView: CheckBox
     private lateinit var startAppButton: Button
     private lateinit var accessibilityButton: Button
@@ -135,6 +136,14 @@ class MainActivity : AppCompatActivity() {
             if (checked && !TouchInjectorService.isConnected) openAccessibilitySettings()
         }
         touchControlView.isChecked = Settings.touchControl(this)
+
+        // Car-screen quick launch drawer. Independent of touch control: it is an overlay on the
+        // mirror that opens on a tap and launches Maps/Waze/YouTube on the phone.
+        quickLaunchView = findViewById(R.id.quick_launch)
+        quickLaunchView.isChecked = Settings.quickLaunch(this)
+        quickLaunchView.setOnCheckedChangeListener { _, checked ->
+            Settings.setQuickLaunch(this, checked)
+        }
 
         autoStartView = findViewById(R.id.auto_start)
         // Set the stored value before attaching the listener so restoring it does not fire it.

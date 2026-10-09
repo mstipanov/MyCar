@@ -24,6 +24,10 @@
     <string name="open_accessibility_settings">Enable touch control (Accessibility settings)</string>
     <string name="touch_control_enabled">Touch control is enabled</string>
 
+    <string name="quick_launch">Show the quick launch menu on the car screen</string>
+    <string name="quick_launch_hint">Tap the car screen to reveal shortcuts for Google Maps, Waze and YouTube; the menu hides again by itself.</string>
+    <string name="quick_launch_title">Quick launch</string>
+
     <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects and stops when it disconnects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. If capture stops on its own while connected (a phone call or a screen lock), MyCar asks for it again and reopens the chosen app. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
 
     <string name="mirror_notification_channel">Screen mirroring</string>

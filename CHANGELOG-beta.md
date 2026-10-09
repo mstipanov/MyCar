@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.19-beta1
+- New quick launch menu on the car screen: tap the mirror to bring up shortcuts for Google Maps, Waze and YouTube and open one on the phone; it hides again after a few seconds
+- New option "Show the quick launch menu on the car screen" (on by default)
+
 ## 1.15-beta1
 - The car screen can now drive more than taps: swipe to pan/scroll and pinch to zoom
 - Pinch maps exactly to where you pinch; panning uses a virtual finger (the car only reports

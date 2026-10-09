@@ -133,6 +133,20 @@
             android:layout_height="wrap_content"
             android:text="@string/open_accessibility_settings" />
 
+        <CheckBox
+            android:id="@+id/quick_launch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/quick_launch" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="12sp"
+            android:text="@string/quick_launch_hint" />
+
         <Button
             android:id="@+id/check_updates"
             android:layout_width="match_parent"

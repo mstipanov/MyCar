@@ -420,7 +420,9 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
     /** Toggles the mirrored phone between portrait and landscape. */
     private fun rotateScreen() {
-        if (!RotationLock.togglePortraitLandscape(context)) {
+        val rotated = RotationLock.togglePortraitLandscape(context)
+        Log.i(TAG, "rotate tapped; display rotated = $rotated")
+        if (!rotated) {
             Log.w(TAG, "rotate: \"Modify system settings\" is not granted; opening it")
             runCatching { context.startActivity(RotationLock.permissionIntent(context)) }
                 .onFailure { Log.w(TAG, "Could not open the write-settings screen", it) }

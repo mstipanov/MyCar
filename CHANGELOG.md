@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.25
+- Fixed the launcher's rotate button doing nothing: MyCar now asks for "Modify system settings" (the permission it needs to rotate) when the quick launch menu is switched on
+
 ## 1.24
 - The car quick launch strip now has a rotate button that flips the mirrored phone between portrait and landscape
 

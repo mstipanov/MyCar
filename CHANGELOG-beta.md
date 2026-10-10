@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.25-beta1
+- Fixed the launcher's rotate button doing nothing: MyCar now asks for "Modify system settings" (the permission it needs to rotate) when the quick launch menu is switched on
+
 ## 1.24-beta1
 - The car quick launch strip now has a rotate button that flips the mirrored phone between portrait and landscape
 

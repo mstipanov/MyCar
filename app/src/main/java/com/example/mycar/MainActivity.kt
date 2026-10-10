@@ -56,6 +56,9 @@ class MainActivity : AppCompatActivity() {
     /** Ensures the "Display over other apps" screen is only sent to once per activity. */
     private var overlayPrompted = false
 
+    /** Ensures the "Modify system settings" screen (needed by the rotate button) is sent to once. */
+    private var writeSettingsPrompted = false
+
     private val requestProjection =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val data = result.data
@@ -144,7 +147,14 @@ class MainActivity : AppCompatActivity() {
         quickLaunchView.isChecked = Settings.quickLaunch(this)
         quickLaunchView.setOnCheckedChangeListener { _, checked ->
             Settings.setQuickLaunch(this, checked)
-            if (checked) requestOverlayPermissionIfNeeded()
+            if (!checked) return@setOnCheckedChangeListener
+            // Opening apps needs "Display over other apps"; the rotate button needs "Modify system
+            // settings". Ask for them one at a time, overlay first.
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                requestOverlayPermissionIfNeeded()
+            } else if (!RotationLock.isAllowed(this)) {
+                startActivity(RotationLock.permissionIntent(this))
+            }
         }
 
         autoStartView = findViewById(R.id.auto_start)
@@ -199,6 +209,14 @@ class MainActivity : AppCompatActivity() {
         ) {
             overlayPrompted = true
             requestOverlayPermissionIfNeeded()
+        }
+        // The launcher's rotate button needs "Modify system settings"; ask for it once the overlay
+        // prompt is out of the way, so the two screens never overlap.
+        if (quickLaunchView.isChecked && android.provider.Settings.canDrawOverlays(this) &&
+            !RotationLock.isAllowed(this) && !writeSettingsPrompted
+        ) {
+            writeSettingsPrompted = true
+            startActivity(RotationLock.permissionIntent(this))
         }
     }
 

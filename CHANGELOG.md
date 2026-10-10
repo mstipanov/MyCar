@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.28
+- The Android Auto category is now selectable in the app: Navigation (default) or Weather. Switching takes effect when Android Auto reconnects
+
 ## 1.27
 - "Choose launcher apps" is now an editor: reorder the car launcher shortcuts with up/down arrows, remove them, and add more apps
 

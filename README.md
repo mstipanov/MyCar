@@ -3,11 +3,11 @@
 [![Latest release](https://img.shields.io/github/v/release/mstipanov/MyCar?sort=semver&label=release)](https://github.com/mstipanov/MyCar/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/mstipanov/MyCar)](LICENSE)
 
-An Android Auto app that shows a live mirror of the phone's own screen. It registers as a
-**navigation** app: that is the category the Car App Library requires for the full-bleed
-`NavigationTemplate`, and it lets Android Auto treat MyCar as the car's default/last navigation
-app. The trade-off is the car's single navigation slot, which MyCar now shares with Google
-Maps/Waze.
+An Android Auto app that shows a live mirror of the phone's own screen. It registers with Android
+Auto as either a **navigation** app (the default: it appears in the navigation launcher and can be
+auto-opened as the default/last navigation app, sharing that single slot with Maps/Waze) or a
+**weather** app (which leaves the navigation slot free). The category is chosen in the app; both
+use the full-bleed `NavigationTemplate`.
 
 Personal sideload project. It deliberately does things Google Play does not allow, so it can
 never be published — see [Caveats](#caveats).
@@ -27,16 +27,17 @@ navigation, point-of-interest and weather apps get:
                                         |  (raw frames, stride-corrected)
                                         v
   MirrorSurfaceCallback  -->  Surface  <-- handed over by Android Auto
-                                        |   because we declare NAVIGATION
+                                        |   because we declare a car category
                                         |   + NAVIGATION_TEMPLATES
                                         |   + ACCESS_SURFACE
                                         v
                                    car display
 ```
 
-* `car/MirrorCarAppService` — the service Android Auto binds to. Its intent filter declares
-  `androidx.car.app.category.NAVIGATION`, so the app is listed as a navigation app and is
-  eligible to be the car's default/last navigation app.
+* `car/MirrorCarAppService` / `car/MirrorWeatherCarAppService` — the two services Android Auto can
+  bind to, identical except for the category on their intent filters (navigation vs weather).
+  `car/CarCategory` enables exactly one at a time, since a category is a manifest declaration and
+  cannot change at runtime; a switch takes effect when Android Auto reconnects.
 * `car/MirrorSession` / `car/MirrorScreen` — returns a bare `NavigationTemplate` so the host
   reserves its map area, then registers the surface callback that claims that area.
   `NavigationTemplate` is the only full-bleed map template — the `MapWithContentTemplate` a
@@ -125,9 +126,9 @@ the same). Then:
    [Hands-free start](#hands-free-start). To start a one-off session manually instead, tap
    **Start mirroring** and approve the capture prompt. Only the phone UI can ask for capture —
    Android Auto does not show a car app's dialogs.
-6. Connect to the car and open **MyCar** from the navigation launcher. As a navigation app it
-   shares that slot with Google Maps/Waze, and Android Auto may open it by itself once it is the
-   last navigation app used.
+6. Connect to the car and open **MyCar** from wherever its category puts it — the navigation
+   launcher by default, or the weather section if you switched the category in the app. After
+   changing the category, reconnect Android Auto for it to take effect.
 
 Capture survives the phone screen turning off, but **not** the phone being locked or the
 projection being revoked. When capture stops on its own while Android Auto is still connected —
@@ -166,6 +167,9 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
 * **Choose launcher apps** — pick which apps the strip shows and organise their order with up/down
   arrows (Google Maps and YouTube by default, plus the rotate button). Changes appear on the car
   launcher immediately.
+* **Android Auto category** — register as *Navigation* (default: the app sits in the navigation
+  launcher and can be auto-opened, sharing that slot with Maps/Waze) or *Weather* (leaves the
+  navigation slot free). A change takes effect when Android Auto reconnects.
 
 ### Hands-free start
 

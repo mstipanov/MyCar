@@ -28,6 +28,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doAfterTextChanged
 import com.example.mycar.auto.CarConnectionWatcher
 import com.example.mycar.capture.ScreenMirrorService
+import com.example.mycar.car.CarCategory
 import com.example.mycar.touch.TouchInjectorService
 import com.example.mycar.update.ApkInstaller
 import com.example.mycar.update.AvailableUpdate
@@ -50,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var touchControlView: CheckBox
     private lateinit var quickLaunchView: CheckBox
     private lateinit var manageLauncherAppsButton: Button
+    private lateinit var categoryGroup: RadioGroup
     private lateinit var autoStartView: CheckBox
     private lateinit var startAppButton: Button
     private lateinit var accessibilityButton: Button
@@ -167,6 +169,25 @@ class MainActivity : AppCompatActivity() {
         manageLauncherAppsButton.setOnClickListener { showLauncherEditor() }
         updateLauncherAppsUi()
 
+        // Which Android Auto category to register under. Backed by two service components; only
+        // the chosen one is enabled, and Android Auto picks it up when it next reconnects.
+        categoryGroup = findViewById(R.id.category_group)
+        categoryGroup.check(
+            when (Settings.carCategory(this)) {
+                CarCategory.NAVIGATION -> R.id.category_navigation
+                CarCategory.WEATHER -> R.id.category_weather
+            }
+        )
+        categoryGroup.setOnCheckedChangeListener { _, checkedId ->
+            val category = if (checkedId == R.id.category_weather) {
+                CarCategory.WEATHER
+            } else {
+                CarCategory.NAVIGATION
+            }
+            Settings.setCarCategory(this, category)
+            CarCategory.register(this, category)
+        }
+
         autoStartView = findViewById(R.id.auto_start)
         // Set the stored value before attaching the listener so restoring it does not fire it.
         autoStartView.isChecked = Settings.autoStart(this)
@@ -228,6 +249,9 @@ class MainActivity : AppCompatActivity() {
             writeSettingsPrompted = true
             startActivity(RotationLock.permissionIntent(this))
         }
+        // Keep the manifest's enabled category in sync with the stored choice (an app update
+        // resets the components to the manifest defaults, i.e. navigation).
+        CarCategory.register(this, Settings.carCategory(this))
     }
 
     /**

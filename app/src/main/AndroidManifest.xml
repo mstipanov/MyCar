@@ -92,16 +92,28 @@
             </intent-filter>
         </activity>
 
-        <!-- Registers this app as a NAVIGATION app in Android Auto. That is the category the Car
-             App Library requires for NavigationTemplate, and it makes MyCar the default/last
-             navigation app so Android Auto can open it by itself. It shares the car's single
-             navigation slot with Google Maps/Waze. -->
+        <!-- Registers this app as a CAR APP in Android Auto. The category decides where it is
+             listed; the other category lives on MirrorWeatherCarAppService below. Only one of the
+             two is enabled at a time (see CarCategory), because the category is a manifest
+             declaration and cannot change at runtime. -->
         <service
                 android:name=".car.MirrorCarAppService"
                 android:exported="true">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
                 <category android:name="androidx.car.app.category.NAVIGATION" />
+            </intent-filter>
+        </service>
+
+        <!-- The weather-category twin, disabled by default. CarCategory.register enables this one
+             (and disables the navigation one) when the user picks Weather in the app. -->
+        <service
+                android:name=".car.MirrorWeatherCarAppService"
+                android:exported="true"
+                android:enabled="false">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.WEATHER" />
             </intent-filter>
         </service>
 

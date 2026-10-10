@@ -6,10 +6,12 @@ import androidx.car.app.SessionInfo
 import androidx.car.app.validation.HostValidator
 
 /**
- * Entry point Android Auto binds to. The `NAVIGATION` category on this service's intent filter is
- * what makes the app appear in the car's navigation launcher.
+ * Entry point Android Auto binds to. Its intent filter — declared in the manifest — carries the
+ * category Android Auto classifies the app under. [MirrorWeatherCarAppService] is the weather
+ * twin; [CarCategory.register] enables exactly one of the two, since the category is a manifest
+ * declaration and cannot change at runtime.
  */
-class MirrorCarAppService : CarAppService() {
+open class MirrorCarAppService : CarAppService() {
 
     private var session: MirrorSession? = null
 

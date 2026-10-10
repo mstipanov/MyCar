@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.28-beta1
+- The Android Auto category is now selectable in the app: Navigation (default) or Weather. Switching takes effect when Android Auto reconnects
+
 ## 1.27-beta1
 - "Choose launcher apps" is now an editor: reorder the car launcher shortcuts with up/down arrows, remove them, and add more apps
 

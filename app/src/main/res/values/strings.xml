@@ -33,6 +33,11 @@
     <string name="move_down">Move down</string>
     <string name="remove">Remove</string>
 
+    <string name="car_category">Android Auto category</string>
+    <string name="car_category_navigation">Navigation (in the navigation launcher)</string>
+    <string name="car_category_weather">Weather (leaves the navigation slot free)</string>
+    <string name="car_category_hint">Takes effect when Android Auto reconnects.</string>
+
     <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects and stops when it disconnects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. If capture stops on its own while connected (a phone call or a screen lock), MyCar asks for it again and reopens the chosen app. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
 
     <string name="mirror_notification_channel">Screen mirroring</string>

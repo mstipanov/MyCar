@@ -1,6 +1,7 @@
 package com.example.mycar
 
 import android.content.Context
+import com.example.mycar.car.CarCategory
 import org.json.JSONArray
 
 /** Small, app-wide user settings. */
@@ -16,6 +17,7 @@ object Settings {
     const val KEY_SCALE_MODE = "scaleMode"
     const val KEY_QUICK_LAUNCH = "quickLaunch"
     const val KEY_LAUNCHER_APPS = "launcherApps"
+    const val KEY_CAR_CATEGORY = "carCategory"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
@@ -89,6 +91,18 @@ object Settings {
         val array = JSONArray()
         packages.forEach { array.put(it) }
         prefs(context).edit().putString(KEY_LAUNCHER_APPS, array.toString()).apply()
+    }
+
+    /**
+     * Which Android Auto category the app registers under. The category is a manifest declaration,
+     * so this is applied to the two mirror services (see `CarCategory.register`) and takes effect
+     * the next time Android Auto scans — i.e. on reconnect.
+     */
+    fun carCategory(context: Context): CarCategory =
+        CarCategory.fromStored(prefs(context).getString(KEY_CAR_CATEGORY, null))
+
+    fun setCarCategory(context: Context, category: CarCategory) {
+        prefs(context).edit().putString(KEY_CAR_CATEGORY, category.name).apply()
     }
 
     /** The launcher apps offered when the user has never chosen their own. */

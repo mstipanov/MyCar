@@ -4,8 +4,9 @@ Instructions for AI agents working in this repository.
 
 ## What this repo is
 
-- `app/` — Android app (Kotlin). Registers as an Android Auto **navigation** app and mirrors the
-  phone screen into the car's map surface. See `README.md` for how that works and its limits.
+- `app/` — Android app (Kotlin). Registers as an Android Auto app and mirrors the phone screen
+  into the car's map surface. Its single Android Auto category — **navigation** or **weather** — is
+  chosen in-app. See `README.md` for how that works and its limits.
 - `CHANGELOG.md` — user-facing changelog, in **English**. One `## <version>` section per release.
 - `CHANGELOG-beta.md` — changelog for beta builds.
 - Distribution is **GitHub Releases**: each version is tagged, built with `:app:assembleRelease`,

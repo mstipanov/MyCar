@@ -154,6 +154,38 @@
             android:layout_marginTop="8dp"
             android:text="@string/manage_launcher_apps" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/car_category"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/category_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/category_navigation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/car_category_navigation" />
+
+            <RadioButton
+                android:id="@+id/category_weather"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/car_category_weather" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="12sp"
+            android:text="@string/car_category_hint" />
+
         <Button
             android:id="@+id/check_updates"
             android:layout_width="match_parent"

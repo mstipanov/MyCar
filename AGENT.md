@@ -12,6 +12,19 @@ Instructions for AI agents working in this repository.
 - Distribution is **GitHub Releases**: each version is tagged, built with `:app:assembleRelease`,
   and attached as `MyCar-<version>.apk`. See [Releases](#step-4--publish-the-release).
 
+## Branches and channels
+
+Never publish a beta from `master`. Work on a branch:
+
+1. **Create a branch first** (`git checkout -b <name>`) before touching code.
+2. **Any branch other than `master` always ships a beta** — `:app:assembleBeta`, a GitHub
+   **prerelease**, and the beta channel. Never publish a stable release from a branch.
+3. **`master` is the stable line.** Only a change merged into `master` may reach the stable
+   release (`:app:assembleRelease`, GitHub `/latest`, the stable in-app channel).
+
+While on a branch, the [Beta builds](#beta-builds) path is mandatory; the stable steps below only
+apply once the branch is merged into `master`.
+
 ## The rule: after every change
 
 Every user-visible change must go through this loop **before you consider the task done**:

@@ -137,12 +137,14 @@ class MainActivity : AppCompatActivity() {
         }
         touchControlView.isChecked = Settings.touchControl(this)
 
-        // Car-screen quick launch drawer. Independent of touch control: it is an overlay on the
-        // mirror that opens on a tap and launches Maps/Waze/YouTube on the phone.
+        // Car-screen quick launch panel. Always shown on the right of the mirror; tapping an app
+        // opens it on the phone. That launch is a background activity start, so it needs
+        // "Display over other apps" (or the MyCar accessibility service).
         quickLaunchView = findViewById(R.id.quick_launch)
         quickLaunchView.isChecked = Settings.quickLaunch(this)
         quickLaunchView.setOnCheckedChangeListener { _, checked ->
             Settings.setQuickLaunch(this, checked)
+            if (checked) requestOverlayPermissionIfNeeded()
         }
 
         autoStartView = findViewById(R.id.auto_start)
@@ -190,6 +192,14 @@ class MainActivity : AppCompatActivity() {
         updateTouchControlUi()
         syncAutoStart()
         maybeAutoStart()
+        // The quick launch panel needs the same background-launch permission to open apps, so ask
+        // for it even when auto-start is off (once per activity, like syncAutoStart does).
+        if (quickLaunchView.isChecked && !android.provider.Settings.canDrawOverlays(this) &&
+            !overlayPrompted
+        ) {
+            overlayPrompted = true
+            requestOverlayPermissionIfNeeded()
+        }
     }
 
     /**

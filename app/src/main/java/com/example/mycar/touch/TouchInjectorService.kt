@@ -2,6 +2,7 @@ package com.example.mycar.touch
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.content.Intent
 import android.graphics.Path
 import android.os.SystemClock
 import android.util.Log
@@ -149,5 +150,15 @@ class TouchInjectorService : AccessibilityService() {
         /** Injects a two-finger pinch centred on a phone pixel. Returns false if not enabled. */
         fun pinch(x: Float, y: Float, scaleFactor: Float): Boolean =
             instance?.pinch(x, y, scaleFactor) ?: false
+
+        /**
+         * Starts [intent] from the accessibility service. Being bound by the system is one of the
+         * routes that lets a background app start an activity, so this is the preferred launch
+         * path for the car's quick launch panel while the service is on. False if it is off.
+         */
+        fun launch(intent: Intent): Boolean {
+            val service = instance ?: return false
+            return runCatching { service.startActivity(intent) }.isSuccess
+        }
     }
 }

@@ -59,19 +59,16 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
     private var rendering = false
 
-    /** Whether the quick launch drawer is on screen right now. */
-    private var menuVisible = false
-
-    /** Hides the drawer once the user stops tapping it; re-armed by every tap. */
-    private val hideMenu = Runnable { menuVisible = false }
-
-    /** Fill behind the drawer's rows. */
+    /** Fill behind the quick launch panel. */
     private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PANEL_COLOR }
 
-    /** Labels inside the drawer; the text size is set from the surface density when drawing. */
+    /** Fill behind each app tile. */
+    private val tilePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = TILE_COLOR }
+
+    /** Labels inside the panel; the text size is set from the surface density when drawing. */
     private val menuTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
 
-    /** Drawer title, resolved once. */
+    /** Panel title, resolved once. */
     private val menuTitle by lazy { context.getString(R.string.quick_launch_title) }
 
     /**
@@ -128,44 +125,24 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     // region touch forwarding
 
     /**
-     * A tap on the car screen. The quick launch drawer gets first refusal: a tap anywhere brings
-     * it up (and still taps the phone, when touch control is on), a tap on a row opens that app,
-     * and a tap on the drawer's own background is swallowed. Everything the drawer does not claim
-     * is forwarded to the phone through the same letterbox transform [drawFrame] uses, so tapping
-     * a button in the mirror presses the same button on the phone. A forwarded tap also re-anchors
-     * the drag cursor.
+     * A tap on the car screen. A tap on the quick launch panel opens that app on the phone;
+     * everything else is forwarded to the phone through the same letterbox transform [drawFrame]
+     * uses, so tapping a button in the mirror presses the same button on the phone. A forwarded
+     * tap also re-anchors the drag cursor.
      */
     override fun onClick(x: Float, y: Float) {
-        if (handleMenuTap(x, y)) return
-        forwardTap(x, y)
-    }
-
-    /**
-     * Runs the quick launch drawer's click handling. Returns true when the tap was consumed by the
-     * drawer and so must not reach the phone.
-     */
-    private fun handleMenuTap(x: Float, y: Float): Boolean {
-        val surfaceContainer = container ?: return false
-        if (!Settings.quickLaunch(context)) return false
-
-        val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-        if (menuVisible) {
-            val layout = menuLayout(area, density(surfaceContainer))
-            val target = layout.rows.firstOrNull { it.first.contains(x, y) }?.second
+        val surfaceContainer = container
+        if (surfaceContainer != null && Settings.quickLaunch(context)) {
+            val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
+            val target = menuLayout(area, density(surfaceContainer)).rows
+                .firstOrNull { it.first.contains(x, y) }
+                ?.second
             if (target != null) {
                 QuickLaunch.open(context, target.packageName)
-                dismissMenu()
-                return true
-            }
-            if (layout.panel.contains(x, y)) {
-                // A tap on the drawer's background: keep it up, but do not tap through it.
-                showMenu()
-                return true
+                return
             }
         }
-        // A tap anywhere else reveals the drawer (or keeps it up) and is forwarded to the phone.
-        showMenu()
-        return false
+        forwardTap(x, y)
     }
 
     private fun forwardTap(x: Float, y: Float) {
@@ -180,18 +157,6 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         if (!TouchInjectorService.tap(point.x, point.y)) {
             Log.w(TAG, "tap not injected: accessibility service is not enabled")
         }
-    }
-
-    /** Shows the drawer and restarts its auto-hide countdown. */
-    private fun showMenu() {
-        menuVisible = true
-        handler.removeCallbacks(hideMenu)
-        handler.postDelayed(hideMenu, MENU_HIDE_MS)
-    }
-
-    private fun dismissMenu() {
-        menuVisible = false
-        handler.removeCallbacks(hideMenu)
     }
 
     /**
@@ -288,7 +253,6 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     fun stop() {
         rendering = false
         handler.removeCallbacks(tick)
-        handler.removeCallbacks(hideMenu)
     }
 
     /**
@@ -390,8 +354,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             }
 
             // Drawn after the frame (and without the FrameStore lock, which is released above), so
-            // the drawer also shows while capture has not produced a frame yet.
-            if (menuVisible && Settings.quickLaunch(context)) {
+            // the panel also shows while capture has not produced a frame yet.
+            if (Settings.quickLaunch(context)) {
                 drawMenu(canvas, area, density(surfaceContainer))
             }
         } finally {
@@ -403,38 +367,41 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         }
     }
 
-    // region quick launch drawer
+    // region quick launch panel
 
-    /** Panel plus the tappable row for each launch target, both in surface pixels. */
+    /** Panel plus the tappable tile for each launch target, both in surface pixels. */
     private data class MenuLayout(val panel: RectF, val rows: List<Pair<RectF, LaunchTarget>>)
 
-    /** Paints the drawer: a dark panel on the right with one icon + label row per target. */
+    /** Paints the panel: a dark right-hand column of rounded, Android Auto-style app tiles. */
     private fun drawMenu(canvas: Canvas, area: Rect, density: Float) {
         val layout = menuLayout(area, density)
-        canvas.drawRoundRect(
-            layout.panel,
-            px(PANEL_CORNER_DP, density),
-            px(PANEL_CORNER_DP, density),
-            panelPaint,
-        )
+        val panelCorner = px(PANEL_CORNER_DP, density)
+        canvas.drawRoundRect(layout.panel, panelCorner, panelCorner, panelPaint)
 
         val padding = px(MENU_PADDING_DP, density)
-        menuTextPaint.textSize = px(MENU_TEXT_DP, density)
-        val baseline = layout.panel.top + padding + menuTextPaint.textSize
-        canvas.drawText(menuTitle, layout.panel.left + padding, baseline, menuTextPaint)
+        menuTextPaint.textSize = px(MENU_TITLE_DP, density)
+        menuTextPaint.color = TITLE_COLOR
+        val titleBaseline = layout.panel.top + padding + menuTextPaint.textSize
+        canvas.drawText(menuTitle, layout.panel.left + padding, titleBaseline, menuTextPaint)
 
         val iconSize = px(MENU_ICON_DP, density)
         val gap = px(MENU_ICON_GAP_DP, density)
-        val maxTextWidth = (layout.panel.width() - padding * 2 - iconSize - gap).coerceAtLeast(0f)
+        val tilePadding = px(MENU_TILE_PADDING_DP, density)
+        val tileCorner = px(TILE_CORNER_DP, density)
 
+        menuTextPaint.textSize = px(MENU_TEXT_DP, density)
+        menuTextPaint.color = Color.WHITE
         for ((row, target) in layout.rows) {
-            val iconLeft = row.left + padding
+            canvas.drawRoundRect(row, tileCorner, tileCorner, tilePaint)
+
+            val iconLeft = row.left + tilePadding
             val iconTop = row.centerY() - iconSize / 2f
             val iconRect = RectF(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
             target.icon?.let { canvas.drawBitmap(it, null, iconRect, paint) }
 
             val textX = iconRect.right + gap
             val textBaseline = row.centerY() - (menuTextPaint.ascent() + menuTextPaint.descent()) / 2f
+            val maxTextWidth = (row.width() - tilePadding * 2 - iconSize - gap).coerceAtLeast(0f)
             val label = TextUtils.ellipsize(
                 target.label,
                 menuTextPaint,
@@ -445,7 +412,7 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         }
     }
 
-    /** Where the drawer and its rows sit for the current area and density. */
+    /** Where the panel and its tiles sit for the current area and density. */
     private fun menuLayout(area: Rect, density: Float): MenuLayout {
         val panelWidth = (area.width() * PANEL_WIDTH_FRACTION)
             .coerceAtMost(px(PANEL_MAX_WIDTH_DP, density))
@@ -456,13 +423,15 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             area.bottom.toFloat(),
         )
 
+        val inset = px(MENU_PADDING_DP, density)
         val headerHeight = px(MENU_HEADER_DP, density)
         val rowHeight = px(MENU_ROW_DP, density)
+        val rowGap = px(MENU_ROW_GAP_DP, density)
         val rows = ArrayList<Pair<RectF, LaunchTarget>>()
         var top = panel.top + headerHeight
         for (target in QuickLaunch.targets(context)) {
-            rows += RectF(panel.left, top, panel.right, top + rowHeight) to target
-            top += rowHeight
+            rows += RectF(panel.left + inset, top, panel.right - inset, top + rowHeight) to target
+            top += rowHeight + rowGap
         }
         return MenuLayout(panel, rows)
     }
@@ -496,23 +465,32 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         const val FLING_SECONDS = 0.15f
         const val FLING_DURATION_MS = 120L
 
-        // region quick launch drawer
-        /** Drawer width as a fraction of the drawing area, capped by [PANEL_MAX_WIDTH_DP]. */
-        const val PANEL_WIDTH_FRACTION = 0.32f
-        const val PANEL_MAX_WIDTH_DP = 240f
-        const val PANEL_CORNER_DP = 16f
-        const val MENU_PADDING_DP = 16f
-        const val MENU_HEADER_DP = 56f
+        // region quick launch panel
+        /** Panel width as a fraction of the drawing area, capped by [PANEL_MAX_WIDTH_DP]. */
+        const val PANEL_WIDTH_FRACTION = 0.34f
+        const val PANEL_MAX_WIDTH_DP = 260f
+        const val PANEL_CORNER_DP = 18f
+
+        /** Panel padding and the header above the tiles. */
+        const val MENU_PADDING_DP = 12f
+        const val MENU_HEADER_DP = 52f
+
+        /** One app tile: height, gap between tiles and the inset inside a tile. */
         const val MENU_ROW_DP = 64f
+        const val MENU_ROW_GAP_DP = 8f
+        const val MENU_TILE_PADDING_DP = 12f
+        const val TILE_CORNER_DP = 14f
+
+        /** Icon, text and the gap between them. */
         const val MENU_ICON_DP = 40f
-        const val MENU_TEXT_DP = 15f
-        const val MENU_ICON_GAP_DP = 16f
+        const val MENU_ICON_GAP_DP = 14f
+        const val MENU_TITLE_DP = 14f
+        const val MENU_TEXT_DP = 16f
 
-        /** How long the drawer stays up after the last tap on it. */
-        const val MENU_HIDE_MS = 4000L
-
-        /** 90%-opaque near-black behind the drawer rows. */
-        val PANEL_COLOR = 0xE61A1A1A.toInt()
+        /** Near-black panel and a faint white tile, Android Auto's dark look. */
+        val PANEL_COLOR = 0xF21B1B1B.toInt()
+        val TILE_COLOR = 0x1FFFFFFF
+        val TITLE_COLOR = 0xB3FFFFFF.toInt()
         // endregion
     }
 }

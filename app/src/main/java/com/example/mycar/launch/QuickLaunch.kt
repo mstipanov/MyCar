@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.Log
+import com.example.mycar.touch.TouchInjectorService
 
 /** One app offered by the car's quick launch menu. */
 data class LaunchTarget(
@@ -49,14 +50,35 @@ object QuickLaunch {
             cache[pkg] ?: resolve(context, pkg)?.also { cache[pkg] = it }
         }
 
-    /** Opens the app on the phone. False when it has no launcher entry or the launch was blocked. */
+    /**
+     * Opens the app on the phone. False when it has no launcher entry or the launch was blocked.
+     *
+     * A launch from the background is only allowed because MyCar holds "Display over other apps"
+     * (the SYSTEM_ALERT_WINDOW background-activity-start exemption), or because its accessibility
+     * service is bound. Without one of those, Android silently drops the launch — no exception —
+     * so this also logs why when the overlay permission is missing.
+     */
     fun open(context: Context, packageName: String): Boolean {
-        val launch = context.packageManager.getLaunchIntentForPackage(packageName)
-        if (launch == null) {
+        val launch = context.packageManager.getLaunchIntentForPackage(packageName) ?: run {
             Log.w(TAG, "$packageName has no launcher entry")
             return false
         }
-        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+
+        // Try the accessibility service first: when it is enabled its process may be allowed to
+        // start activities from the background even without the overlay permission.
+        if (TouchInjectorService.launch(launch)) {
+            Log.i(TAG, "Opened $packageName through the accessibility service")
+            return true
+        }
+
+        if (!android.provider.Settings.canDrawOverlays(context)) {
+            Log.w(
+                TAG,
+                "Opening $packageName may be blocked: grant \"Display over other apps\" to " +
+                    "MyCar, or enable the MyCar accessibility service",
+            )
+        }
         return runCatching {
             context.startActivity(launch)
         }.onFailure {

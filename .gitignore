@@ -25,3 +25,6 @@ local.properties
 
 # Local marketing notes — kept on disk, never published.
 /marketing/
+
+# Local opportunity-monitor scripts and reports — kept on disk, never published.
+/tools/opportunities/

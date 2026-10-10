@@ -1,0 +1,21 @@
+# Where to look for people asking about YouTube on Android Auto.
+# Lines starting with '#' are comments and ignored.
+#
+# Subreddits to search (prefix: r/)
+r/AndroidAuto
+r/androidapps
+r/AndroidQuestions
+r/Android
+r/CarPlay
+
+# Search terms (prefix: q/). Each is searched in every sub above, plus once
+# globally across all of Reddit.
+q/youtube android auto
+q/play youtube on android auto
+q/watch video android auto
+q/screen mirror android auto
+q/netflix android auto
+q/carstream
+q/fermata auto
+q/screen2auto
+q/aaad android auto

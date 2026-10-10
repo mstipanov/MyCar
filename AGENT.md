@@ -76,15 +76,22 @@ Keep `versionCode` and `versionName` in lockstep with the newest `## <version>` 
 ## Step 4 — Publish the release
 
 Create the GitHub Release: tag = `versionName`, title = `MyCar-v<versionName>`, asset = the APK.
+The notes are the version's `CHANGELOG.md` section **followed by the support footer in
+`SUPPORT.md`**, so every release carries the Buy Me a Coffee / PayPal links.
 
 ```sh
+# Release notes = this version's CHANGELOG.md section + the support footer.
+cat > /tmp/mycar-notes.md <<'EOF'
+<the 1.16 section of CHANGELOG.md>
+EOF
+cat SUPPORT.md >> /tmp/mycar-notes.md
+
 gh release create 1.16 app/build/outputs/apk/release/MyCar-1.16.apk \
-  --title "MyCar-v1.16" --latest \
-  --notes "<the 1.16 section of CHANGELOG.md>"
+  --title "MyCar-v1.16" --latest --notes-file /tmp/mycar-notes.md
 ```
 
 Done when the release appears at
-https://github.com/mstipanov/MyCar/releases/latest with the APK attached.
+https://github.com/mstipanov/MyCar/releases/latest with the APK attached and the support footer.
 
 ## Signing
 
@@ -112,7 +119,9 @@ stable release:
 2. Add the `## <versionName>` section to `CHANGELOG-beta.md` (e.g. `## 1.16-beta1`).
 3. `./gradlew :app:assembleBeta` → `app/build/outputs/apk/beta/MyCar-<versionName>.apk`.
 4. `gh release create <version> app/build/outputs/apk/beta/MyCar-<versionName>.apk \
-     --title "MyCar-v<versionName>" --prerelease --notes "<the beta changelog>"`.
+     --title "MyCar-v<versionName>" --prerelease --notes-file <notes>` — the notes are the beta
+   changelog section plus the `SUPPORT.md` footer, as in
+   [Step 4](#step-4--publish-the-release).
 
 Beta shares the stable package and **signature** (both use the release key), so a beta installs
 over the stable app on a tester's phone, and vice versa.

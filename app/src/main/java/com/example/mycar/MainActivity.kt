@@ -250,7 +250,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(RotationLock.permissionIntent(this))
         }
         // Keep the manifest's enabled category in sync with the stored choice (an app update
-        // resets the components to the manifest defaults, i.e. navigation).
+        // resets the components to the manifest defaults, i.e. weather).
         CarCategory.register(this, Settings.carCategory(this))
     }
 

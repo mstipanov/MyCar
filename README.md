@@ -4,10 +4,10 @@
 [![License: MIT](https://img.shields.io/github/license/mstipanov/MyCar)](LICENSE)
 
 An Android Auto app that shows a live mirror of the phone's own screen. It registers with Android
-Auto as either a **navigation** app (the default: it appears in the navigation launcher and can be
-auto-opened as the default/last navigation app, sharing that single slot with Maps/Waze) or a
-**weather** app (which leaves the navigation slot free). The category is chosen in the app; both
-use the full-bleed `NavigationTemplate`.
+Auto as either a **weather** app (the default: it leaves the car's navigation slot to Maps/Waze and
+shows the mirror beside them) or a **navigation** app (it appears in the navigation launcher and
+can be auto-opened as the default/last navigation app, sharing that single slot with Maps/Waze).
+The category is chosen in the app; both use the full-bleed `NavigationTemplate`.
 
 Personal sideload project. It deliberately does things Google Play does not allow, so it can
 never be published — see [Caveats](#caveats).
@@ -81,11 +81,12 @@ Each release is built from the tagged source and published by hand:
 ```sh
 ./gradlew :app:assembleRelease
 gh release create <version> app/build/outputs/apk/release/MyCar-<version>.apk \
-  --title "MyCar-v<version>" --notes "<the changelog for this version>"
+  --title "MyCar-v<version>" --notes-file <notes>
 ```
 
 `<version>` is the `versionName` in `app/build.gradle.kts` and the newest `## <version>` section in
-`CHANGELOG.md`; the release notes come from that section. `AGENT.md` documents the full loop.
+`CHANGELOG.md`; `<notes>` is that section followed by the support footer in `SUPPORT.md`, so every
+release carries the Buy Me a Coffee / PayPal links. `AGENT.md` documents the full loop.
 
 ### In-app updates
 
@@ -126,8 +127,8 @@ the same). Then:
    [Hands-free start](#hands-free-start). To start a one-off session manually instead, tap
    **Start mirroring** and approve the capture prompt. Only the phone UI can ask for capture —
    Android Auto does not show a car app's dialogs.
-6. Connect to the car and open **MyCar** from wherever its category puts it — the navigation
-   launcher by default, or the weather section if you switched the category in the app. After
+6. Connect to the car and open **MyCar** from wherever its category puts it — the weather section
+   by default, or the navigation launcher if you switched the category in the app. After
    changing the category, reconnect Android Auto for it to take effect.
 
 Capture survives the phone screen turning off, but **not** the phone being locked or the
@@ -167,9 +168,10 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
 * **Choose launcher apps** — pick which apps the strip shows and organise their order with up/down
   arrows (Google Maps and YouTube by default, plus the rotate button). Changes appear on the car
   launcher immediately.
-* **Android Auto category** — register as *Navigation* (default: the app sits in the navigation
-  launcher and can be auto-opened, sharing that slot with Maps/Waze) or *Weather* (leaves the
-  navigation slot free). A change takes effect when Android Auto reconnects.
+* **Android Auto category** — register as *Weather* (the default: it leaves the navigation slot
+  free, so Maps/Waze keep routing while the mirror is on screen) or *Navigation* (the app sits in
+  the navigation launcher and can be auto-opened, sharing that slot with Maps/Waze). A change takes
+  effect when Android Auto reconnects.
 
 ### Hands-free start
 

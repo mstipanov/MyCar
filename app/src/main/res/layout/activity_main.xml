@@ -148,6 +148,13 @@
             android:text="@string/quick_launch_hint" />
 
         <Button
+            android:id="@+id/manage_launcher_apps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/manage_launcher_apps" />
+
+        <Button
             android:id="@+id/check_updates"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

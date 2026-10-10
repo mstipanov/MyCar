@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.26-beta1
+- Dropped Waze from the car launcher and pinned the rotate button to the bottom of the strip
+- New "Choose launcher apps" option: pick which apps appear on the car launcher
+
 ## 1.25-beta1
 - Fixed the launcher's rotate button doing nothing: MyCar now asks for "Modify system settings" (the permission it needs to rotate) when the quick launch menu is switched on
 

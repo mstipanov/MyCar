@@ -158,11 +158,13 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   opens it as soon as the mirror is live, so the car screen shows that app instead of the phone's
   home screen. When it fires from the background it uses the same *Display over other apps*
   permission; the chosen package and label are stored in the app's settings.
-* **Show the quick launch menu on the car screen** — a slim, icon-only strip of shortcuts (Google
-  Maps, Waze, YouTube) beside the mirror: a column on the right, or along the bottom while the
-  media panel is open. The strip gets its own space, so it never covers the mirror. Tapping an
-  icon opens that phone app (needs *Display over other apps*, or the MyCar accessibility service);
-  a rotate button flips the phone between portrait and landscape (needs *Modify system settings*).
+* **Show the quick launch menu on the car screen** — a slim, icon-only strip of shortcuts beside
+  the mirror: a column on the right, or along the bottom while the media panel is open. The strip
+  gets its own space, so it never covers the mirror. Tapping an icon opens that phone app (needs
+  *Display over other apps*, or the MyCar accessibility service). A rotate button pinned to the
+  bottom flips the phone between portrait and landscape (needs *Modify system settings*).
+* **Choose launcher apps** — pick which apps the strip shows (Google Maps and YouTube by default,
+  plus the rotate button).
 
 ### Hands-free start
 

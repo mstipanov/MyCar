@@ -75,9 +75,6 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         ContextCompat.getDrawable(context, R.drawable.ic_rotate)?.let { rasterize(it) }
     }
 
-    /** Launcher cells (apps plus built-in actions), built once and reused for every frame. */
-    private var launcherCells: List<LauncherEntry>? = null
-
     /**
      * Where a drag would land on the phone, in captured pixels. The car never tells us where a
      * drag began (only per-event deltas), so panning moves this "virtual finger" instead. It is
@@ -104,8 +101,6 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             stableArea = null
         }
         container = surfaceContainer
-        // Rebuild the launcher cells so a newly installed or removed app is picked up.
-        launcherCells = null
         if (!rendering) {
             rendering = true
             handler.post(tick)
@@ -401,11 +396,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     /** True when the user wants the car-side launcher at all. */
     private fun launcherEnabled(): Boolean = Settings.quickLaunch(context)
 
-    /** The launcher cells, built once: the app targets, then the rotate action. */
-    private fun launcherEntries(): List<LauncherEntry> =
-        launcherCells ?: buildLauncherEntries().also { launcherCells = it }
-
-    private fun buildLauncherEntries(): List<LauncherEntry> {
+    /** The launcher cells: the app targets, then the rotate action. Cheap to rebuild each frame. */
+    private fun launcherEntries(): List<LauncherEntry> {
         val entries = ArrayList<LauncherEntry>()
         for (target in QuickLaunch.targets(context)) {
             entries += LauncherEntry(target.icon, isAction = false) {
@@ -484,19 +476,33 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         }
 
         val entries = launcherEntries()
+        val apps = entries.filter { !it.isAction }
+        val actions = entries.filter { it.isAction }
         val cell = thickness
         val cells = ArrayList<Pair<RectF, LauncherEntry>>(entries.size)
         if (atBottom) {
-            var left = strip.centerX() - cell * entries.size / 2f
-            for (entry in entries) {
+            // Apps centred along the strip; actions pinned to the far (right) end.
+            var left = strip.centerX() - cell * apps.size / 2f
+            for (entry in apps) {
                 cells += RectF(left, strip.top, left + cell, strip.bottom) to entry
                 left += cell
             }
+            var right = strip.right
+            for (entry in actions) {
+                cells += RectF(right - cell, strip.top, right, strip.bottom) to entry
+                right -= cell
+            }
         } else {
-            var top = strip.centerY() - cell * entries.size / 2f
-            for (entry in entries) {
+            // Apps centred in the column; actions pinned to the bottom.
+            var top = strip.centerY() - cell * apps.size / 2f
+            for (entry in apps) {
                 cells += RectF(strip.left, top, strip.right, top + cell) to entry
                 top += cell
+            }
+            var bottom = strip.bottom
+            for (entry in actions) {
+                cells += RectF(strip.left, bottom - cell, strip.right, bottom) to entry
+                bottom -= cell
             }
         }
         return LauncherLayout(strip, cells)

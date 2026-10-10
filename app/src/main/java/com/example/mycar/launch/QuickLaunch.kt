@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.Log
+import com.example.mycar.Settings
 import com.example.mycar.touch.TouchInjectorService
 
 /** One app offered by the car's quick launch menu. */
@@ -24,19 +25,15 @@ data class LaunchTarget(
  * the phone: the chosen app opens on the phone and the mirror shows it. That background launch
  * needs "Display over other apps", the same permission auto-start already relies on.
  *
- * The list is deliberately hard-coded for now; making it editable and reorderable is the natural
- * next step.
+ * The apps shown are user-managed (`Settings.launcherApps`); when that has never been set,
+ * [DEFAULT_PACKAGES] is used. Only the installed ones are offered.
  */
 object QuickLaunch {
 
     private const val TAG = "QuickLaunch"
 
-    /** Package names, in the order they appear in the menu. */
-    private val PACKAGES = listOf(
-        "com.google.android.apps.maps",
-        "com.waze",
-        "com.google.android.youtube",
-    )
+    /** Package names shown when the user has not chosen their own launcher apps. */
+    private val DEFAULT_PACKAGES = Settings.DEFAULT_LAUNCHER_APPS
 
     /** Decoded icon edge, in pixels. The drawer scales it to its row height when drawing. */
     private const val ICON_PX = 128
@@ -44,11 +41,14 @@ object QuickLaunch {
     /** Icons and labels are resolved once per process and reused for every frame. */
     private val cache = HashMap<String, LaunchTarget>()
 
-    /** The installed apps among [PACKAGES], with labels and icons. Cheap after the first call. */
-    fun targets(context: Context): List<LaunchTarget> =
-        PACKAGES.mapNotNull { pkg ->
+    /** The installed apps among the user's chosen launcher apps (or the defaults). Cheap after
+     * the first call. */
+    fun targets(context: Context): List<LaunchTarget> {
+        val packages = Settings.launcherApps(context) ?: DEFAULT_PACKAGES
+        return packages.mapNotNull { pkg ->
             cache[pkg] ?: resolve(context, pkg)?.also { cache[pkg] = it }
         }
+    }
 
     /**
      * Opens the app on the phone. False when it has no launcher entry or the launch was blocked.

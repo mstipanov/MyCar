@@ -1,6 +1,7 @@
 package com.example.mycar
 
 import android.content.Context
+import org.json.JSONArray
 
 /** Small, app-wide user settings. */
 object Settings {
@@ -14,6 +15,7 @@ object Settings {
     const val KEY_START_APP_LABEL = "startAppLabel"
     const val KEY_SCALE_MODE = "scaleMode"
     const val KEY_QUICK_LAUNCH = "quickLaunch"
+    const val KEY_LAUNCHER_APPS = "launcherApps"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
@@ -70,6 +72,30 @@ object Settings {
     fun setQuickLaunch(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_QUICK_LAUNCH, enabled).apply()
     }
+
+    /**
+     * The apps the car launcher shows, in order. Null means the user has never chosen, so the
+     * caller should fall back to its built-in default list; an empty list means "no apps".
+     */
+    fun launcherApps(context: Context): List<String>? {
+        val stored = prefs(context).getString(KEY_LAUNCHER_APPS, null) ?: return null
+        return runCatching {
+            val array = JSONArray(stored)
+            (0 until array.length()).map { array.getString(it) }
+        }.getOrNull()
+    }
+
+    fun setLauncherApps(context: Context, packages: List<String>) {
+        val array = JSONArray()
+        packages.forEach { array.put(it) }
+        prefs(context).edit().putString(KEY_LAUNCHER_APPS, array.toString()).apply()
+    }
+
+    /** The launcher apps offered when the user has never chosen their own. */
+    val DEFAULT_LAUNCHER_APPS = listOf(
+        "com.google.android.apps.maps",
+        "com.google.android.youtube",
+    )
 
     /**
      * Whether taps on the car touchscreen are forwarded to the phone. Requires the app's

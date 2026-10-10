@@ -44,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var lockLandscapeView: CheckBox
     private lateinit var touchControlView: CheckBox
     private lateinit var quickLaunchView: CheckBox
+    private lateinit var manageLauncherAppsButton: Button
     private lateinit var autoStartView: CheckBox
     private lateinit var startAppButton: Button
     private lateinit var accessibilityButton: Button
@@ -156,6 +157,10 @@ class MainActivity : AppCompatActivity() {
                 startActivity(RotationLock.permissionIntent(this))
             }
         }
+
+        manageLauncherAppsButton = findViewById(R.id.manage_launcher_apps)
+        manageLauncherAppsButton.setOnClickListener { showLauncherAppsPicker() }
+        updateLauncherAppsUi()
 
         autoStartView = findViewById(R.id.auto_start)
         // Set the stored value before attaching the listener so restoring it does not fire it.
@@ -342,6 +347,70 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    /** Shows how many launcher shortcuts are configured, or the prompt when none are chosen. */
+    private fun updateLauncherAppsUi() {
+        val count = currentLauncherApps().size
+        manageLauncherAppsButton.text = if (count == 0) {
+            getString(R.string.manage_launcher_apps)
+        } else {
+            getString(R.string.manage_launcher_apps_count, count)
+        }
+    }
+
+    private fun currentLauncherApps(): List<String> =
+        Settings.launcherApps(this) ?: Settings.DEFAULT_LAUNCHER_APPS
+
+    /** Multi-select picker for the apps the car launcher shows; tapping a row toggles it. */
+    private fun showLauncherAppsPicker() {
+        val apps = launchableApps()
+        val selected = LinkedHashSet(currentLauncherApps())
+
+        val view = layoutInflater.inflate(R.layout.dialog_app_picker, null)
+        val search = view.findViewById<EditText>(R.id.search)
+        val list = view.findViewById<ListView>(R.id.list)
+        list.choiceMode = ListView.CHOICE_MODE_MULTIPLE
+
+        val shown = mutableListOf<Pair<String, String>>()
+        var filter = ""
+        fun matches(label: String) = filter.isEmpty() || label.lowercase().contains(filter)
+
+        fun refresh() {
+            shown.clear()
+            shown.addAll(apps.filter { matches(it.second) })
+            list.adapter = ArrayAdapter(
+                this,
+                android.R.layout.simple_list_item_multiple_choice,
+                shown.map { it.second },
+            )
+            shown.forEachIndexed { index, app ->
+                list.setItemChecked(index, selected.contains(app.first))
+            }
+        }
+        refresh()
+
+        search.doAfterTextChanged { editable ->
+            filter = editable?.toString()?.trim()?.lowercase().orEmpty()
+            refresh()
+        }
+
+        list.setOnItemClickListener { _, _, position, _ ->
+            val pkg = shown.getOrNull(position)?.first ?: return@setOnItemClickListener
+            // A checked row was already selected, so this tap removes it; otherwise it adds it.
+            if (!selected.remove(pkg)) selected.add(pkg)
+            list.setItemChecked(position, selected.contains(pkg))
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.manage_launcher_apps)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                Settings.setLauncherApps(this, selected.toList())
+                updateLauncherAppsUi()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /** Installed apps with a launcher entry, deduplicated by package and named as shown. */

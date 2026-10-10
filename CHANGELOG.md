@@ -1,5 +1,9 @@
 # MyCar
 
+## 1.26
+- Dropped Waze from the car launcher and pinned the rotate button to the bottom of the strip
+- New "Choose launcher apps" option: pick which apps appear on the car launcher
+
 ## 1.25
 - Fixed the launcher's rotate button doing nothing: MyCar now asks for "Modify system settings" (the permission it needs to rotate) when the quick launch menu is switched on
 

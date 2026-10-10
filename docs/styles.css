@@ -153,6 +153,18 @@ td.maybe { color: var(--warn); }
 .button:hover { text-decoration: none; filter: brightness(1.08); }
 .button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 
+/* Support callout */
+.support {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-top: 20px;
+}
+.support p { margin: 0 0 10px; }
+.support p:last-child { margin-bottom: 0; }
+
 /* Footer */
 footer {
   border-top: 1px solid var(--line);

@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.21
+- New app icon: a car with a lit-up screen, replacing the default placeholder art
+
 ## 1.20
 - The quick launch menu is now always shown on the right of the car screen instead of appearing on a tap, and is styled like the Android Auto app list
 - Opening an app from the menu now works: it needs "Display over other apps" (or the MyCar accessibility service), which is asked for when the menu is switched on

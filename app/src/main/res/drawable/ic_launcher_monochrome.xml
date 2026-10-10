@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Themed-icon (monochrome) layer: the same car silhouette with the windshield punched out using
+    an even-odd fill, so Android 13+ can tint it into a single-colour outlined car.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M35,75 C32.2,75 30,72.8 30,70 L30,61 C30,57.8 31.6,55.7 35,54.6 L41,42.6 C42,39.9 44,38.5 46.8,38.5 L61.2,38.5 C64,38.5 66,39.9 67,42.6 L73,54.6 C76.4,55.7 78,57.8 78,61 L78,70 C78,72.8 75.8,75 73,75 Z M43.2,54 C43.2,53.3 43.4,52.6 43.8,52 L47.4,43.9 C47.9,42.9 48.9,42.3 50,42.3 L58,42.3 C59.1,42.3 60.1,42.9 60.6,43.9 L64.2,52 C64.6,52.6 64.8,53.3 64.8,54 Z" />
+</vector>

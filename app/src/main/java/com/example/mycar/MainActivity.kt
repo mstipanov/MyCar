@@ -9,11 +9,16 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
+import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ListView
 import android.widget.RadioGroup
 import android.widget.TextView
@@ -159,7 +164,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         manageLauncherAppsButton = findViewById(R.id.manage_launcher_apps)
-        manageLauncherAppsButton.setOnClickListener { showLauncherAppsPicker() }
+        manageLauncherAppsButton.setOnClickListener { showLauncherEditor() }
         updateLauncherAppsUi()
 
         autoStartView = findViewById(R.id.auto_start)
@@ -362,15 +367,49 @@ class MainActivity : AppCompatActivity() {
     private fun currentLauncherApps(): List<String> =
         Settings.launcherApps(this) ?: Settings.DEFAULT_LAUNCHER_APPS
 
-    /** Multi-select picker for the apps the car launcher shows; tapping a row toggles it. */
-    private fun showLauncherAppsPicker() {
-        val apps = launchableApps()
-        val selected = LinkedHashSet(currentLauncherApps())
+    /** Editor for the car launcher: reorder with up/down, remove, and add apps. Saves on change. */
+    private fun showLauncherEditor() {
+        val entries = currentLauncherEntries().toMutableList()
+        val adapter = LauncherEditorAdapter(entries)
 
+        val view = layoutInflater.inflate(R.layout.dialog_launcher, null)
+        view.findViewById<ListView>(R.id.launcher_list).adapter = adapter
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.manage_launcher_apps)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok, null)
+            .create()
+
+        view.findViewById<Button>(R.id.add_app).setOnClickListener {
+            showAddLauncherApp { packageName, label ->
+                entries.add(packageName to label)
+                adapter.notifyDataSetChanged()
+                saveLauncherEntries(entries)
+            }
+        }
+
+        dialog.show()
+    }
+
+    /** The launcher apps in order, resolved to (package, label); uninstalled ones are dropped. */
+    private fun currentLauncherEntries(): List<Pair<String, String>> {
+        val labels = launchableApps().toMap()
+        return currentLauncherApps().mapNotNull { pkg -> labels[pkg]?.let { pkg to it } }
+    }
+
+    private fun saveLauncherEntries(entries: List<Pair<String, String>>) {
+        Settings.setLauncherApps(this, entries.map { it.first })
+        updateLauncherAppsUi()
+    }
+
+    /** Single-select picker for an app to append to the launcher. */
+    private fun showAddLauncherApp(onPicked: (String, String) -> Unit) {
+        val existing = currentLauncherApps().toSet()
+        val apps = launchableApps().filter { it.first !in existing }
         val view = layoutInflater.inflate(R.layout.dialog_app_picker, null)
         val search = view.findViewById<EditText>(R.id.search)
         val list = view.findViewById<ListView>(R.id.list)
-        list.choiceMode = ListView.CHOICE_MODE_MULTIPLE
 
         val shown = mutableListOf<Pair<String, String>>()
         var filter = ""
@@ -379,14 +418,8 @@ class MainActivity : AppCompatActivity() {
         fun refresh() {
             shown.clear()
             shown.addAll(apps.filter { matches(it.second) })
-            list.adapter = ArrayAdapter(
-                this,
-                android.R.layout.simple_list_item_multiple_choice,
-                shown.map { it.second },
-            )
-            shown.forEachIndexed { index, app ->
-                list.setItemChecked(index, selected.contains(app.first))
-            }
+            list.adapter =
+                ArrayAdapter(this, android.R.layout.simple_list_item_1, shown.map { it.second })
         }
         refresh()
 
@@ -395,22 +428,61 @@ class MainActivity : AppCompatActivity() {
             refresh()
         }
 
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.add_launcher_app)
+            .setView(view)
+            .create()
+
         list.setOnItemClickListener { _, _, position, _ ->
-            val pkg = shown.getOrNull(position)?.first ?: return@setOnItemClickListener
-            // A checked row was already selected, so this tap removes it; otherwise it adds it.
-            if (!selected.remove(pkg)) selected.add(pkg)
-            list.setItemChecked(position, selected.contains(pkg))
+            shown.getOrNull(position)?.let { onPicked(it.first, it.second) }
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
+    /** Binds the launcher entries to rows with up/down/remove, persisting after every change. */
+    private inner class LauncherEditorAdapter(
+        private val entries: MutableList<Pair<String, String>>,
+    ) : BaseAdapter() {
+
+        override fun getCount(): Int = entries.size
+        override fun getItem(position: Int): Any = entries[position]
+        override fun getItemId(position: Int): Long = position.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val row = convertView
+                ?: layoutInflater.inflate(R.layout.dialog_launcher_row, parent, false)
+            val (packageName, label) = entries[position]
+
+            row.findViewById<TextView>(R.id.label).text = label
+            row.findViewById<ImageView>(R.id.icon).setImageDrawable(
+                runCatching { packageManager.getApplicationIcon(packageName) }.getOrNull(),
+            )
+
+            val up = row.findViewById<ImageButton>(R.id.up)
+            up.isEnabled = position > 0
+            up.alpha = if (position > 0) 1f else 0.3f
+            up.setOnClickListener { move(position, position - 1) }
+
+            val down = row.findViewById<ImageButton>(R.id.down)
+            down.isEnabled = position < entries.size - 1
+            down.alpha = if (position < entries.size - 1) 1f else 0.3f
+            down.setOnClickListener { move(position, position + 1) }
+
+            row.findViewById<ImageButton>(R.id.remove).setOnClickListener {
+                entries.removeAt(position)
+                notifyDataSetChanged()
+                saveLauncherEntries(entries)
+            }
+            return row
         }
 
-        AlertDialog.Builder(this)
-            .setTitle(R.string.manage_launcher_apps)
-            .setView(view)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                Settings.setLauncherApps(this, selected.toList())
-                updateLauncherAppsUi()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        private fun move(from: Int, to: Int) {
+            if (to < 0 || to >= entries.size) return
+            entries.add(to, entries.removeAt(from))
+            notifyDataSetChanged()
+            saveLauncherEntries(entries)
+        }
     }
 
     /** Installed apps with a launcher entry, deduplicated by package and named as shown. */

@@ -28,6 +28,10 @@
     <string name="quick_launch_hint">Always shown on the car screen as a strip of icons — on the right, or along the bottom while a media panel is open. Opening an app needs "Display over other apps"; the rotate button needs "Modify system settings".</string>
     <string name="manage_launcher_apps">Choose launcher apps</string>
     <string name="manage_launcher_apps_count">Launcher apps: %1$d</string>
+    <string name="add_launcher_app">Add app</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="remove">Remove</string>
 
     <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects and stops when it disconnects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. If capture stops on its own while connected (a phone call or a screen lock), MyCar asks for it again and reopens the chosen app. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
 

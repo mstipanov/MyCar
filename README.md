@@ -163,8 +163,9 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   gets its own space, so it never covers the mirror. Tapping an icon opens that phone app (needs
   *Display over other apps*, or the MyCar accessibility service). A rotate button pinned to the
   bottom flips the phone between portrait and landscape (needs *Modify system settings*).
-* **Choose launcher apps** — pick which apps the strip shows (Google Maps and YouTube by default,
-  plus the rotate button).
+* **Choose launcher apps** — pick which apps the strip shows and organise their order with up/down
+  arrows (Google Maps and YouTube by default, plus the rotate button). Changes appear on the car
+  launcher immediately.
 
 ### Hands-free start
 

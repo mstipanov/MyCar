@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.27
+- "Choose launcher apps" is now an editor: reorder the car launcher shortcuts with up/down arrows, remove them, and add more apps
+
 ## 1.26
 - Dropped Waze from the car launcher and pinned the rotate button to the bottom of the strip
 - New "Choose launcher apps" option: pick which apps appear on the car launcher

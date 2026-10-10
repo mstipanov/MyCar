@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.22-beta1
+- MyCar now registers as an Android Auto **navigation** app instead of a weather app, so it appears in the navigation launcher and Android Auto can open it by itself; it shares the navigation slot with Google Maps/Waze
+
 ## 1.21-beta1
 - New app icon: a car with a lit-up screen, replacing the default placeholder art
 

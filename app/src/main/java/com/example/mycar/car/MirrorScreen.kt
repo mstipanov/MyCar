@@ -11,9 +11,10 @@ import androidx.car.app.navigation.model.NavigationTemplate
  * The screen Android Auto shows. [NavigationTemplate] gives the host's map area the whole
  * screen, and [MirrorSurfaceCallback] is what fills it.
  *
- * The app is declared as a **weather** app (see the service intent filter) so it does not take
- * the car's single navigation slot and Google Maps/Waze can keep navigating; it declares the
- * `NAVIGATION_TEMPLATES` permission because that is what gates [NavigationTemplate].
+ * The app is declared as a **navigation** app (see the service intent filter): that is the
+ * category the Car App Library requires for [NavigationTemplate], and it lets Android Auto treat
+ * MyCar as the default/last navigation app so it can come up on its own. The cost is the car's
+ * single navigation slot, which MyCar now shares with Google Maps/Waze.
  * `MapWithContentTemplate` (the weather/POI alternative) always splits the screen with a
  * mandatory content pane, which cost roughly half the mirror.
  */

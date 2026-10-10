@@ -6,8 +6,8 @@ import androidx.car.app.SessionInfo
 import androidx.car.app.validation.HostValidator
 
 /**
- * Entry point Android Auto binds to. The `WEATHER` category on this service's intent filter is
- * what makes the app appear in the car alongside a real navigation app.
+ * Entry point Android Auto binds to. The `NAVIGATION` category on this service's intent filter is
+ * what makes the app appear in the car's navigation launcher.
  */
 class MirrorCarAppService : CarAppService() {
 

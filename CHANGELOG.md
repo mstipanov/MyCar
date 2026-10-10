@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.22
+- MyCar now registers as an Android Auto **navigation** app instead of a weather app, so it appears in the navigation launcher and Android Auto can open it by itself; it shares the navigation slot with Google Maps/Waze
+
 ## 1.21
 - New app icon: a car with a lit-up screen, replacing the default placeholder art
 

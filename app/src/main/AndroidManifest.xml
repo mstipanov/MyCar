@@ -7,11 +7,14 @@
         ACCESS_SURFACE is what unlocks it. Both are required for the mirror to have anywhere to
         render.
 
-        NAVIGATION_TEMPLATES even though this app declares the WEATHER category: the permission
-        is what gates NavigationTemplate, and NavigationTemplate is the only template that gives
+        NAVIGATION_TEMPLATES: the permission that gates NavigationTemplate. As a navigation app
+        this is the documented requirement, and NavigationTemplate is the only template that gives
         the map the whole screen (MapWithContentTemplate always splits it with a content pane).
-        The category decides where the app is listed - and staying out of the car's single
-        navigation slot is the whole point here, so Maps/Waze keep it.
+
+        Declaring the NAVIGATION category below puts MyCar in the car's single navigation slot, so
+        it shares that slot with Google Maps/Waze. That is deliberate for this experiment: as a
+        navigation app, Android Auto treats the last navigation app as the default and can bring
+        MyCar up by itself.
     -->
     <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES" />
     <uses-permission android:name="androidx.car.app.ACCESS_SURFACE" />
@@ -89,15 +92,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Registers this app as a WEATHER app in Android Auto, not a navigation app: only one
-             app can hold the car's navigation slot, so as a nav app the mirror would push Google
-             Maps/Waze out of it. Weather apps can still own a Surface (MapWithContentTemplate). -->
+        <!-- Registers this app as a NAVIGATION app in Android Auto. That is the category the Car
+             App Library requires for NavigationTemplate, and it makes MyCar the default/last
+             navigation app so Android Auto can open it by itself. It shares the car's single
+             navigation slot with Google Maps/Waze. -->
         <service
                 android:name=".car.MirrorCarAppService"
                 android:exported="true">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.WEATHER" />
+                <category android:name="androidx.car.app.category.NAVIGATION" />
             </intent-filter>
         </service>
 

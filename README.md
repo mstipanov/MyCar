@@ -3,10 +3,11 @@
 [![Latest release](https://img.shields.io/github/v/release/mstipanov/MyCar?sort=semver&label=release)](https://github.com/mstipanov/MyCar/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/mstipanov/MyCar)](LICENSE)
 
-An Android Auto app that registers itself as a **weather** app but shows a live mirror of
-the phone's own screen instead of weather. Registering as weather rather than navigation keeps
-MyCar out of the car's single navigation slot, so Google Maps or Waze can keep navigating while
-the mirror is on screen.
+An Android Auto app that shows a live mirror of the phone's own screen. It registers as a
+**navigation** app: that is the category the Car App Library requires for the full-bleed
+`NavigationTemplate`, and it lets Android Auto treat MyCar as the car's default/last navigation
+app. The trade-off is the car's single navigation slot, which MyCar now shares with Google
+Maps/Waze.
 
 Personal sideload project. It deliberately does things Google Play does not allow, so it can
 never be published — see [Caveats](#caveats).
@@ -26,7 +27,7 @@ navigation, point-of-interest and weather apps get:
                                         |  (raw frames, stride-corrected)
                                         v
   MirrorSurfaceCallback  -->  Surface  <-- handed over by Android Auto
-                                        |   because we declare WEATHER
+                                        |   because we declare NAVIGATION
                                         |   + NAVIGATION_TEMPLATES
                                         |   + ACCESS_SURFACE
                                         v
@@ -34,13 +35,14 @@ navigation, point-of-interest and weather apps get:
 ```
 
 * `car/MirrorCarAppService` — the service Android Auto binds to. Its intent filter declares
-  `androidx.car.app.category.WEATHER`, so the app is listed next to a real navigation app
-  instead of competing for the car's one navigation slot.
+  `androidx.car.app.category.NAVIGATION`, so the app is listed as a navigation app and is
+  eligible to be the car's default/last navigation app.
 * `car/MirrorSession` / `car/MirrorScreen` — returns a bare `NavigationTemplate` so the host
   reserves its map area, then registers the surface callback that claims that area.
   `NavigationTemplate` is the only full-bleed map template — the `MapWithContentTemplate` a
   weather app would normally use always splits the screen with a mandatory content pane. The
-  `NAVIGATION_TEMPLATES` permission is what gates it, and the category is only about placement.
+  `NAVIGATION_TEMPLATES` permission is what gates it; the category decides which launcher it
+  appears in.
 * `car/MirrorSurfaceCallback` — the "map". Runs a 30 fps loop that letterboxes the newest
   captured frame into the surface.
 * `capture/ScreenMirrorService` — foreground service that owns the `MediaProjection` and
@@ -123,8 +125,9 @@ the same). Then:
    [Hands-free start](#hands-free-start). To start a one-off session manually instead, tap
    **Start mirroring** and approve the capture prompt. Only the phone UI can ask for capture —
    Android Auto does not show a car app's dialogs.
-6. Connect to the car and open **MyCar** from the app grid. It is a weather app, so it is not in
-   the navigation launcher; that slot stays free for Google Maps/Waze.
+6. Connect to the car and open **MyCar** from the navigation launcher. As a navigation app it
+   shares that slot with Google Maps/Waze, and Android Auto may open it by itself once it is the
+   last navigation app used.
 
 Capture survives the phone screen turning off, but **not** the phone being locked or the
 projection being revoked. When capture stops on its own while Android Auto is still connected —
@@ -198,9 +201,10 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 
 * **Sideload only.** Android Auto only runs apps installed from a trusted store (Google Play,
   ONE store), so a sideloaded build needs an installer that impersonates one (KingInstaller).
-  On top of that, the combination this app relies on — the `WEATHER` category together with the
-  `NAVIGATION_TEMPLATES` permission — is rejected during Play review. `createHostValidator()`
-  returns `ALLOW_ALL_HOSTS_VALIDATOR` precisely because no host trusts this build.
+  The navigation category with the `NAVIGATION_TEMPLATES` permission is Play-valid, but the app
+  still cannot ship: it mirrors the whole screen and never actually navigates, and
+  `createHostValidator()` returns `ALLOW_ALL_HOSTS_VALIDATOR` precisely because no host trusts
+  this build.
 * **A consent grant is required per capture session.** Android does not let `MediaProjection`
   permission persist. MyCar makes it hands-free two ways — an accessibility service that answers
   the prompt, or the `PROJECT_MEDIA` app-op (one-time `adb`) that grants silently. With neither,
@@ -233,7 +237,7 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 * **App does not appear in Android Auto** — *Unknown sources* is off, the build was not installed
   by an installer that impersonates the Play Store (*KingInstaller*), or the head unit was
   connected before the app was installed (reconnect it). Confirm the merged manifest still
-  declares the `androidx.car.app.category.WEATHER` category plus the `NAVIGATION_TEMPLATES` and
+  declares the `androidx.car.app.category.NAVIGATION` category plus the `NAVIGATION_TEMPLATES` and
   `ACCESS_SURFACE` permissions:
   `app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml`
 * **Car screen stays black, never letterboxes** — no frames are arriving, so capture is not
@@ -241,9 +245,9 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 * **Car screen is black but the notification is present** — the phone is locked, or the
   foreground activity is `FLAG_SECURE`.
 * **`onSurfaceAvailable` never fires** — the host has not handed over the map surface. Some hosts
-  only do that once an app takes navigation focus, which this app deliberately never does: it is
-  a weather app, and taking navigation focus would push Google Maps/Waze out of the navigation
-  slot.
+  only do that once an app takes navigation focus. This build declares the navigation category
+  but never calls `NavigationManager.navigationStarted()`, so on those hosts open MyCar from the
+  navigation launcher first.
 * **Skewed / diagonal image** — the capture buffer's `rowStride` is not being honoured. That
   logic lives in `FrameStore.update()`; do not "simplify" it.
 * **`Surface.lockCanvas` throws** — fall back to the documented alternative: create a

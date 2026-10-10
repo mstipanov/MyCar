@@ -22,3 +22,6 @@ local.properties
 # IDE
 .idea/
 .kotlin/
+
+# Local marketing notes — kept on disk, never published.
+/marketing/

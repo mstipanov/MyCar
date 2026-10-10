@@ -10,12 +10,9 @@ import android.graphics.RectF
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.text.TextPaint
-import android.text.TextUtils
 import android.util.Log
 import androidx.car.app.SurfaceCallback
 import androidx.car.app.SurfaceContainer
-import com.example.mycar.R
 import com.example.mycar.ScaleMode
 import com.example.mycar.Settings
 import com.example.mycar.capture.FrameStore
@@ -38,6 +35,10 @@ import com.example.mycar.touch.TouchInjectorService
  * conservative [onStableAreaChanged]), so the frame is fitted into the visible region rather
  * than the whole surface. How it is fitted is the user's [ScaleMode]: [ScaleMode.FIT] shows the
  * whole screen with black bars, the other modes scale it up and let the overflow be cropped.
+ *
+ * The icon-only quick launch strip gets its own space: a column on the right normally, or a row
+ * along the bottom while a media/assistant panel is open. The mirror is fitted into what is left,
+ * so the strip never covers it.
  */
 class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
@@ -59,17 +60,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
     private var rendering = false
 
-    /** Fill behind the quick launch panel. */
-    private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PANEL_COLOR }
-
-    /** Fill behind each app tile. */
-    private val tilePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = TILE_COLOR }
-
-    /** Labels inside the panel; the text size is set from the surface density when drawing. */
-    private val menuTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
-
-    /** Panel title, resolved once. */
-    private val menuTitle by lazy { context.getString(R.string.quick_launch_title) }
+    /** Fill behind the quick launch strip. */
+    private val launcherPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PANEL_COLOR }
 
     /**
      * Where a drag would land on the phone, in captured pixels. The car never tells us where a
@@ -125,16 +117,18 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     // region touch forwarding
 
     /**
-     * A tap on the car screen. A tap on the quick launch panel opens that app on the phone;
+     * A tap on the car screen. A tap on the quick launch strip opens that app on the phone;
      * everything else is forwarded to the phone through the same letterbox transform [drawFrame]
      * uses, so tapping a button in the mirror presses the same button on the phone. A forwarded
      * tap also re-anchors the drag cursor.
      */
     override fun onClick(x: Float, y: Float) {
         val surfaceContainer = container
-        if (surfaceContainer != null && Settings.quickLaunch(context)) {
+        if (surfaceContainer != null && launcherEnabled()) {
+            val density = density(surfaceContainer)
             val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-            val target = menuLayout(area, density(surfaceContainer)).rows
+            val atBottom = panelShown(area, density)
+            val target = launcherLayout(area, density, atBottom).cells
                 .firstOrNull { it.first.contains(x, y) }
                 ?.second
             if (target != null) {
@@ -240,8 +234,10 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     private fun pictureScale(): Float? {
         val surfaceContainer = container ?: return null
         val picture = FrameStore.pictureSize() ?: return null
+        val density = density(surfaceContainer)
         val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-        computeDestination(area, picture.x, picture.y, scratchRect)
+        val content = contentArea(area, density, panelShown(area, density))
+        computeDestination(content, picture.x, picture.y, scratchRect)
         if (scratchRect.isEmpty) return null
         val scale = scratchRect.width() / picture.x
         return if (scale > 0f) scale else null
@@ -308,8 +304,10 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val surfaceContainer = container ?: return null
         val picture = FrameStore.pictureSize() ?: return null
 
+        val density = density(surfaceContainer)
         val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-        computeDestination(area, picture.x, picture.y, scratchRect)
+        val content = contentArea(area, density, panelShown(area, density))
+        computeDestination(content, picture.x, picture.y, scratchRect)
         if (scratchRect.isEmpty) return null
         if (!scratchRect.contains(x, y)) return null
 
@@ -332,6 +330,10 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val areaHeight = area.height()
         if (areaWidth <= 0 || areaHeight <= 0) return
 
+        val density = density(surfaceContainer)
+        val atBottom = panelShown(area, density)
+        val content = contentArea(area, density, atBottom)
+
         val canvas: Canvas = try {
             surface.lockCanvas(null)
         } catch (t: Throwable) {
@@ -342,21 +344,21 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         try {
             canvas.drawColor(Color.BLACK)
 
-            // Fit the frame into the area the host allows us, per the user's scale mode.
-            // The FILL modes deliberately overdraw the area; the canvas clips the overflow.
+            // Fit the frame into the area left for it, per the user's scale mode. The FILL modes
+            // deliberately overdraw the area; the canvas clips the overflow.
             FrameStore.withFrame { bitmap, pictureWidth, pictureHeight ->
                 if (pictureWidth <= 0 || pictureHeight <= 0) return@withFrame
-                computeDestination(area, pictureWidth, pictureHeight, destinationRect)
+                computeDestination(content, pictureWidth, pictureHeight, destinationRect)
                 if (!destinationRect.isEmpty) {
                     sourceRect.set(0, 0, pictureWidth, pictureHeight)
                     canvas.drawBitmap(bitmap, sourceRect, destinationRect, paint)
                 }
             }
 
-            // Drawn after the frame (and without the FrameStore lock, which is released above), so
-            // the panel also shows while capture has not produced a frame yet.
-            if (Settings.quickLaunch(context)) {
-                drawMenu(canvas, area, density(surfaceContainer))
+            // Drawn after the frame and without the FrameStore lock, so the strip also shows while
+            // capture has not produced a frame yet.
+            if (launcherEnabled()) {
+                drawLauncher(canvas, area, density, atBottom)
             }
         } finally {
             try {
@@ -367,73 +369,95 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         }
     }
 
-    // region quick launch panel
+    // region quick launch launcher
 
-    /** Panel plus the tappable tile for each launch target, both in surface pixels. */
-    private data class MenuLayout(val panel: RectF, val rows: List<Pair<RectF, LaunchTarget>>)
+    /** The launcher strip plus the tappable cell for each target, both in surface pixels. */
+    private data class LauncherLayout(val strip: RectF, val cells: List<Pair<RectF, LaunchTarget>>)
 
-    /** Paints the panel: a dark right-hand column of rounded, Android Auto-style app tiles. */
-    private fun drawMenu(canvas: Canvas, area: Rect, density: Float) {
-        val layout = menuLayout(area, density)
-        val panelCorner = px(PANEL_CORNER_DP, density)
-        canvas.drawRoundRect(layout.panel, panelCorner, panelCorner, panelPaint)
+    /** True when the user wants the car-side launcher at all. */
+    private fun launcherEnabled(): Boolean = Settings.quickLaunch(context)
 
-        val padding = px(MENU_PADDING_DP, density)
-        menuTextPaint.textSize = px(MENU_TITLE_DP, density)
-        menuTextPaint.color = TITLE_COLOR
-        val titleBaseline = layout.panel.top + padding + menuTextPaint.textSize
-        canvas.drawText(menuTitle, layout.panel.left + padding, titleBaseline, menuTextPaint)
+    /**
+     * Whether a transient host panel (media/assistant) is covering part of the surface right now.
+     * The host reflects that by reporting a [stableArea] smaller than the visible area; with no
+     * panel open the two match. This decides whether the launcher sits on the side or the bottom.
+     */
+    private fun panelShown(area: Rect, density: Float): Boolean {
+        val stable = stableArea ?: return false
+        val tolerance = px(6f, density)
+        return stable.width() < area.width() - tolerance ||
+            stable.height() < area.height() - tolerance
+    }
 
-        val iconSize = px(MENU_ICON_DP, density)
-        val gap = px(MENU_ICON_GAP_DP, density)
-        val tilePadding = px(MENU_TILE_PADDING_DP, density)
-        val tileCorner = px(TILE_CORNER_DP, density)
-
-        menuTextPaint.textSize = px(MENU_TEXT_DP, density)
-        menuTextPaint.color = Color.WHITE
-        for ((row, target) in layout.rows) {
-            canvas.drawRoundRect(row, tileCorner, tileCorner, tilePaint)
-
-            val iconLeft = row.left + tilePadding
-            val iconTop = row.centerY() - iconSize / 2f
-            val iconRect = RectF(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
-            target.icon?.let { canvas.drawBitmap(it, null, iconRect, paint) }
-
-            val textX = iconRect.right + gap
-            val textBaseline = row.centerY() - (menuTextPaint.ascent() + menuTextPaint.descent()) / 2f
-            val maxTextWidth = (row.width() - tilePadding * 2 - iconSize - gap).coerceAtLeast(0f)
-            val label = TextUtils.ellipsize(
-                target.label,
-                menuTextPaint,
-                maxTextWidth,
-                TextUtils.TruncateAt.END,
-            )
-            canvas.drawText(label.toString(), textX, textBaseline, menuTextPaint)
+    /**
+     * The part of [area] the mirror may use once the launcher strip is carved out, so the strip
+     * never covers the mirror. [area] itself when the launcher is off.
+     */
+    private fun contentArea(area: Rect, density: Float, atBottom: Boolean): Rect {
+        if (!launcherEnabled()) return area
+        val thickness = px(LAUNCHER_THICKNESS_DP, density).toInt()
+        return if (atBottom) {
+            Rect(area.left, area.top, area.right, (area.bottom - thickness).coerceAtLeast(area.top))
+        } else {
+            Rect(area.left, area.top, (area.right - thickness).coerceAtLeast(area.left), area.bottom)
         }
     }
 
-    /** Where the panel and its tiles sit for the current area and density. */
-    private fun menuLayout(area: Rect, density: Float): MenuLayout {
-        val panelWidth = (area.width() * PANEL_WIDTH_FRACTION)
-            .coerceAtMost(px(PANEL_MAX_WIDTH_DP, density))
-        val panel = RectF(
-            area.right - panelWidth,
-            area.top.toFloat(),
-            area.right.toFloat(),
-            area.bottom.toFloat(),
-        )
-
-        val inset = px(MENU_PADDING_DP, density)
-        val headerHeight = px(MENU_HEADER_DP, density)
-        val rowHeight = px(MENU_ROW_DP, density)
-        val rowGap = px(MENU_ROW_GAP_DP, density)
-        val rows = ArrayList<Pair<RectF, LaunchTarget>>()
-        var top = panel.top + headerHeight
-        for (target in QuickLaunch.targets(context)) {
-            rows += RectF(panel.left + inset, top, panel.right - inset, top + rowHeight) to target
-            top += rowHeight + rowGap
+    /** The strip the launcher occupies: a column on the right, or a row along the bottom. */
+    private fun launcherLayout(area: Rect, density: Float, atBottom: Boolean): LauncherLayout {
+        val thickness = px(LAUNCHER_THICKNESS_DP, density)
+        val strip = if (atBottom) {
+            RectF(
+                area.left.toFloat(),
+                area.bottom - thickness,
+                area.right.toFloat(),
+                area.bottom.toFloat(),
+            )
+        } else {
+            RectF(
+                area.right - thickness,
+                area.top.toFloat(),
+                area.right.toFloat(),
+                area.bottom.toFloat(),
+            )
         }
-        return MenuLayout(panel, rows)
+
+        val targets = QuickLaunch.targets(context)
+        val cell = thickness
+        val cells = ArrayList<Pair<RectF, LaunchTarget>>(targets.size)
+        if (atBottom) {
+            var left = strip.centerX() - cell * targets.size / 2f
+            for (target in targets) {
+                cells += RectF(left, strip.top, left + cell, strip.bottom) to target
+                left += cell
+            }
+        } else {
+            var top = strip.centerY() - cell * targets.size / 2f
+            for (target in targets) {
+                cells += RectF(strip.left, top, strip.right, top + cell) to target
+                top += cell
+            }
+        }
+        return LauncherLayout(strip, cells)
+    }
+
+    /** Paints the strip: a dark bar of app icons only — no labels, no covering panel. */
+    private fun drawLauncher(canvas: Canvas, area: Rect, density: Float, atBottom: Boolean) {
+        val layout = launcherLayout(area, density, atBottom)
+        canvas.drawRect(layout.strip, launcherPaint)
+
+        val iconSize = px(LAUNCHER_ICON_DP, density)
+        for ((cell, target) in layout.cells) {
+            val icon = target.icon ?: continue
+            val cx = cell.centerX()
+            val cy = cell.centerY()
+            canvas.drawBitmap(
+                icon,
+                null,
+                RectF(cx - iconSize / 2f, cy - iconSize / 2f, cx + iconSize / 2f, cy + iconSize / 2f),
+                paint,
+            )
+        }
     }
 
     /** Surface pixels per dp. The host reports the surface dpi; assume mdpi if it does not. */
@@ -465,32 +489,15 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         const val FLING_SECONDS = 0.15f
         const val FLING_DURATION_MS = 120L
 
-        // region quick launch panel
-        /** Panel width as a fraction of the drawing area, capped by [PANEL_MAX_WIDTH_DP]. */
-        const val PANEL_WIDTH_FRACTION = 0.34f
-        const val PANEL_MAX_WIDTH_DP = 260f
-        const val PANEL_CORNER_DP = 18f
+        // region quick launch strip
+        /** Strip thickness in dp: its width on the right, or its height along the bottom. */
+        const val LAUNCHER_THICKNESS_DP = 78f
 
-        /** Panel padding and the header above the tiles. */
-        const val MENU_PADDING_DP = 12f
-        const val MENU_HEADER_DP = 52f
+        /** Icon edge inside a strip cell, in dp. */
+        const val LAUNCHER_ICON_DP = 54f
 
-        /** One app tile: height, gap between tiles and the inset inside a tile. */
-        const val MENU_ROW_DP = 64f
-        const val MENU_ROW_GAP_DP = 8f
-        const val MENU_TILE_PADDING_DP = 12f
-        const val TILE_CORNER_DP = 14f
-
-        /** Icon, text and the gap between them. */
-        const val MENU_ICON_DP = 40f
-        const val MENU_ICON_GAP_DP = 14f
-        const val MENU_TITLE_DP = 14f
-        const val MENU_TEXT_DP = 16f
-
-        /** Near-black panel and a faint white tile, Android Auto's dark look. */
+        /** Near-black bar behind the icons. */
         val PANEL_COLOR = 0xF21B1B1B.toInt()
-        val TILE_COLOR = 0x1FFFFFFF
-        val TITLE_COLOR = 0xB3FFFFFF.toInt()
         // endregion
     }
 }

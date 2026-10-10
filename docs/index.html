@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to Play YouTube on Android Auto (2026) — Every Method, Compared</title>
+<meta name="description" content="Play YouTube and any app on your Android Auto screen in 2026. Compare the official limit, AAAD/Fermata Auto and CarStream, and MyCar, a screen mirror that keeps your navigation slot free. Step-by-step sideload guide.">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#0b0f14">
+<link rel="canonical" href="https://mstipanov.github.io/MyCar/">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="How to Play YouTube on Android Auto (2026)">
+<meta property="og:description" content="Every method for video on Android Auto, compared — official limits, AAAD/Fermata Auto, CarStream, and a screen mirror that keeps Google Maps in the navigation slot.">
+<meta property="og:url" content="https://mstipanov.github.io/MyCar/">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="icon.png" type="image/png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "MyCar",
+  "operatingSystem": "Android 9+ (API 28+)",
+  "applicationCategory": "MultimediaApplication",
+  "description": "An Android Auto screen mirror that registers as a navigation or weather app, so it can show any phone app — including YouTube — without taking the car's navigation slot.",
+  "url": "https://mstipanov.github.io/MyCar/",
+  "downloadUrl": "https://github.com/mstipanov/MyCar/releases/latest",
+  "softwareVersion": "1.28",
+  "license": "https://opensource.org/license/mit",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Marko Stipanov" }
+}
+</script>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">2026 guide · works on Android 9 and newer</p>
+    <h1>How to play YouTube on Android Auto</h1>
+    <p class="lede">
+      Google blocks video on Android Auto while you drive — that part is on purpose.
+      This is an honest comparison of every way people actually get around it, from the
+      official option to the sideloaded tools, plus a step-by-step install.
+    </p>
+    <p class="safety">
+      <strong>Use it as a passenger or while parked.</strong> Watching video while driving is
+      illegal in most places and genuinely dangerous. Nothing here is affiliated with Google or
+      YouTube.
+    </p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="short-answer">
+    <h2>The short answer</h2>
+    <p>
+      There is no official way to watch YouTube <em>video</em> on Android Auto while the car is
+      moving. The only two real routes are:
+    </p>
+    <ul>
+      <li><strong>The sideline apps</strong> (AAAD, Fermata Auto, CarStream) — one-tap installs that
+        bundle a small browser/video player into Android Auto.</li>
+      <li><strong>Screen mirroring</strong> — project your entire phone screen onto the car display
+        and drive it however you like. This is the most flexible, because it isn't limited to
+        YouTube: Netflix, a browser, a game, anything on your phone shows up.</li>
+    </ul>
+    <p>
+      Every route except the official one is a sideload, and Android Auto will only list a
+      sideloaded app if it was installed by something that looks like a store
+      (<a href="https://github.com/fcaronte/KingInstaller/releases" rel="noopener">KingInstaller</a>).
+      That single step trips most people up.
+    </p>
+  </section>
+
+  <section id="compare">
+    <h2>Every method, compared</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Plays YouTube video?</th>
+            <th>Keeps Google&nbsp;Maps in the nav slot?</th>
+            <th>Works while parked / as passenger</th>
+            <th>Install effort</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Official YouTube / YouTube Music in Android Auto</td>
+            <td class="no">No — audio only</td>
+            <td class="yes">Yes</td>
+            <td class="yes">Yes (audio)</td>
+            <td class="yes">None</td>
+          </tr>
+          <tr>
+            <td>AAAD / AAStore + Fermata Auto or CarStream</td>
+            <td class="yes">Yes</td>
+            <td class="maybe">Usually not</td>
+            <td class="yes">Yes</td>
+            <td class="maybe">One tap (via AAAD)</td>
+          </tr>
+          <tr>
+            <td>Screen2Auto</td>
+            <td class="yes">Yes (mirrors screen)</td>
+            <td class="maybe">Usually not</td>
+            <td class="yes">Yes</td>
+            <td class="maybe">Medium</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>MyCar (screen mirror)</strong></td>
+            <td class="yes">Yes — any app</td>
+            <td class="yes">Yes — it can register as weather, or share navigation</td>
+            <td class="yes">Yes</td>
+            <td class="maybe">Sideload with KingInstaller</td>
+          </tr>
+          <tr>
+            <td>Wireless Android Auto "AI box" (CarlinKit and similar)</td>
+            <td class="yes">Yes</td>
+            <td class="yes">Yes</td>
+            <td class="yes">Yes</td>
+            <td class="yes">Plug in</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fineprint">
+      "Keeps the nav slot" matters if you want Google Maps or Waze to keep routing while the video
+      is on screen. Most video tools replace the navigation app; a mirror can be shown beside it.
+    </p>
+  </section>
+
+  <section id="mycar">
+    <h2>MyCar: mirror any app, keep your navigation slot</h2>
+    <p>
+      <a href="https://github.com/mstipanov/MyCar" rel="noopener">MyCar</a> is a free, open-source
+      <strong>screen mirror</strong> for Android Auto. Instead of shipping a video player, it shows
+      your actual phone screen on the car display and forwards taps, scrolls and pinches back to
+      the phone — so you open the real YouTube app, the real Netflix, or anything else.
+    </p>
+    <p>What makes it different from the other mirrors and video apps:</p>
+    <ul>
+      <li><strong>It doesn't have to steal the navigation slot.</strong> It can register as a
+        <em>weather</em> app instead, so Google Maps or Waze keep navigating while MyCar is on
+        screen. (It can also take the navigation slot as a mirror if you prefer.)</li>
+      <li><strong>Any app, not just YouTube.</strong> Because it mirrors the whole screen, there is
+        no per-app support list to wait for.</li>
+      <li><strong>Open source, MIT licensed, no ads, no account.</strong> The APK is built from the
+        tagged source and published on GitHub Releases.</li>
+      <li><strong>It updates itself.</strong> Installed builds poll a version endpoint and offer the
+        newer APK in-app.</li>
+    </ul>
+    <p class="safety">
+      Not affiliated with Google or YouTube. MyCar deliberately does things Google Play does not
+      allow, so it can never be published there — it is sideload-only. Use it as a passenger or
+      while parked, and follow the laws where you drive.
+    </p>
+  </section>
+
+  <section id="install">
+    <h2>Step-by-step: install MyCar and get YouTube on the car screen</h2>
+
+    <ol class="steps">
+      <li>
+        <h3>Install KingInstaller on the phone</h3>
+        <p>
+          Android Auto only lists apps that came from a trusted store, so a normal sideload never
+          shows up. <a href="https://github.com/fcaronte/KingInstaller/releases" rel="noopener">KingInstaller</a>
+          makes Android treat the APK as if it came from the Play Store. Install it first.
+        </p>
+      </li>
+      <li>
+        <h3>Install MyCar through KingInstaller</h3>
+        <p>
+          Download the latest <code>MyCar-&lt;version&gt;.apk</code> from the
+          <a href="https://github.com/mstipanov/MyCar/releases/latest" rel="noopener">Releases page</a>
+          and install it with KingInstaller.
+        </p>
+      </li>
+      <li>
+        <h3>Unlock Android Auto developer mode</h3>
+        <p>
+          On the phone: <strong>Android Auto settings → scroll to Version → tap it about 10 times</strong>.
+          A prompt will confirm developer mode is on.
+        </p>
+      </li>
+      <li>
+        <h3>Allow unknown sources</h3>
+        <p>
+          In Android Auto's overflow menu open <strong>Developer settings</strong> and turn on
+          <strong>Unknown sources</strong> ("Allow apps from unknown sources"). Without this,
+          sideloaded apps stay hidden.
+        </p>
+      </li>
+      <li>
+        <h3>Grant the phone-side permissions once</h3>
+        <p>
+          Open <strong>MyCar</strong> on the phone. With <em>Start automatically when Android Auto
+          connects</em> on (the default) it will ask for <strong>Display over other apps</strong> and
+          ask you to enable the <strong>MyCar accessibility service</strong>. Both are needed for a
+          truly hands-free start (the accessibility service is also what lets the car touchscreen
+          drive the phone). Sideloaded apps must allow <em>restricted settings</em> first:
+          <strong>Settings → Apps → MyCar → ⋮ → Allow restricted settings</strong>.
+        </p>
+      </li>
+      <li>
+        <h3>Open MyCar in the car</h3>
+        <p>
+          Connect to Android Auto and open <strong>MyCar</strong> from the navigation launcher
+          (default) or from the weather section if you switched the category. If it isn't listed,
+          reconnect the head unit.
+        </p>
+      </li>
+      <li>
+        <h3>Open YouTube and play</h3>
+        <p>
+          Tap YouTube in the quick-launch strip (or open it on the phone) and tap play. The video
+          lands on the car screen. Rotate to landscape from the strip for full screen.
+        </p>
+      </li>
+    </ol>
+
+    <details class="optional">
+      <summary>Optional: remove the last tap (one-time ADB command)</summary>
+      <p>
+        Android requires you to approve screen capture once per session. To make MyCar grant it
+        silently, run this once with the phone connected via USB debugging:
+      </p>
+      <pre><code>adb shell cmd appops set --user 0 com.example.mycar PROJECT_MEDIA allow</code></pre>
+      <p>Without it, the accessibility service still answers the prompt automatically.</p>
+    </details>
+  </section>
+
+  <section id="faq">
+    <h2>Troubleshooting &amp; FAQ</h2>
+
+    <h3>The car screen is black</h3>
+    <p>
+      Either capture isn't running (check the MyCar foreground notification and re-approve capture),
+      the phone is locked, or the app on screen uses <code>FLAG_SECURE</code>. Banking apps, DRM
+      video and some password fields are forced black by Android — that is the system, not a bug.
+      YouTube itself mirrors fine; some paid streaming apps force a black frame.
+    </p>
+
+    <h3>MyCar doesn't appear in Android Auto</h3>
+    <p>
+      Unknown sources is off, the APK wasn't installed by KingInstaller, or the head unit was
+      connected before MyCar was installed — reconnect it. Also confirm developer mode is still on.
+    </p>
+
+    <h3>Does it work with wireless Android Auto?</h3>
+    <p>
+      Yes, mirroring works over both USB and wireless Android Auto. The phone and the head unit
+      just need to be connected.
+    </p>
+
+    <h3>Do I need root?</h3>
+    <p>
+      No. MyCar uses the standard Android MediaProjection screen capture and the Android Auto map
+      surface. Neither needs root.
+    </p>
+
+    <h3>Why does it need an accessibility service?</h3>
+    <p>
+      For two things: pressing "Share/Start" on the system capture prompt so start is hands-free,
+      and injecting your car-screen taps back into the phone. The service only ever looks at
+      SystemUI's projection window.
+    </p>
+
+    <h3>Is this legal / will it get me in trouble?</h3>
+    <p>
+      Playing video on a screen visible to the driver while moving is illegal in many countries and
+      is a bad idea regardless. Treat this as passenger or parked entertainment. You are responsible
+      for how you use it.
+    </p>
+  </section>
+
+  <section id="get">
+    <h2>Get MyCar</h2>
+    <p>
+      <a class="button" href="https://github.com/mstipanov/MyCar/releases/latest" rel="noopener">Download the latest APK</a>
+      <a class="button ghost" href="https://github.com/mstipanov/MyCar" rel="noopener">Source on GitHub</a>
+    </p>
+    <p class="fineprint">
+      Latest stable: <strong>1.28</strong> · MIT licensed · Requires Android 9 (API 28) or newer.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      MyCar is an independent, sideload-only project and is <strong>not affiliated with, endorsed
+      by, or associated with Google or YouTube</strong>. Android and Android Auto are trademarks of
+      Google LLC. The YouTube name and logo are trademarks of Google LLC.
+    </p>
+    <p>
+      If MyCar is useful to you:
+      <a href="https://buymeacoffee.com/mstipanov" rel="noopener">Buy Me a Coffee</a> ·
+      <a href="https://paypal.me/mstipanov" rel="noopener">PayPal</a>
+    </p>
+  </div>
+</footer>
+</body>
+</html>

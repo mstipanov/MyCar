@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mstipanov.github.io/MyCar/sitemap.xml

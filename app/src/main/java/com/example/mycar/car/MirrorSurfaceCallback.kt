@@ -1,22 +1,26 @@
 package com.example.mycar.car
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import androidx.car.app.SurfaceCallback
 import androidx.car.app.SurfaceContainer
+import androidx.core.content.ContextCompat
+import com.example.mycar.R
+import com.example.mycar.RotationLock
 import com.example.mycar.ScaleMode
 import com.example.mycar.Settings
 import com.example.mycar.capture.FrameStore
-import com.example.mycar.launch.LaunchTarget
 import com.example.mycar.launch.QuickLaunch
 import com.example.mycar.touch.TouchInjectorService
 
@@ -63,6 +67,17 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     /** Fill behind the quick launch strip. */
     private val launcherPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PANEL_COLOR }
 
+    /** Faint disc behind action cells (e.g. rotate) so they read as buttons, not apps. */
+    private val actionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ACTION_COLOR }
+
+    /** The rotate glyph, rasterized once. */
+    private val rotateIcon: Bitmap? by lazy {
+        ContextCompat.getDrawable(context, R.drawable.ic_rotate)?.let { rasterize(it) }
+    }
+
+    /** Launcher cells (apps plus built-in actions), built once and reused for every frame. */
+    private var launcherCells: List<LauncherEntry>? = null
+
     /**
      * Where a drag would land on the phone, in captured pixels. The car never tells us where a
      * drag began (only per-event deltas), so panning moves this "virtual finger" instead. It is
@@ -89,6 +104,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             stableArea = null
         }
         container = surfaceContainer
+        // Rebuild the launcher cells so a newly installed or removed app is picked up.
+        launcherCells = null
         if (!rendering) {
             rendering = true
             handler.post(tick)
@@ -128,11 +145,11 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             val density = density(surfaceContainer)
             val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
             val atBottom = panelShown(area, density)
-            val target = launcherLayout(area, density, atBottom).cells
+            val entry = launcherLayout(area, density, atBottom).cells
                 .firstOrNull { it.first.contains(x, y) }
                 ?.second
-            if (target != null) {
-                QuickLaunch.open(context, target.packageName)
+            if (entry != null) {
+                entry.activate()
                 return
             }
         }
@@ -371,11 +388,53 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
     // region quick launch launcher
 
-    /** The launcher strip plus the tappable cell for each target, both in surface pixels. */
-    private data class LauncherLayout(val strip: RectF, val cells: List<Pair<RectF, LaunchTarget>>)
+    /** One tappable cell: an app icon to open, or a built-in action like rotate. */
+    private class LauncherEntry(
+        val icon: Bitmap?,
+        val isAction: Boolean,
+        val activate: () -> Unit,
+    )
+
+    /** The launcher strip plus the tappable cell for each entry, both in surface pixels. */
+    private data class LauncherLayout(val strip: RectF, val cells: List<Pair<RectF, LauncherEntry>>)
 
     /** True when the user wants the car-side launcher at all. */
     private fun launcherEnabled(): Boolean = Settings.quickLaunch(context)
+
+    /** The launcher cells, built once: the app targets, then the rotate action. */
+    private fun launcherEntries(): List<LauncherEntry> =
+        launcherCells ?: buildLauncherEntries().also { launcherCells = it }
+
+    private fun buildLauncherEntries(): List<LauncherEntry> {
+        val entries = ArrayList<LauncherEntry>()
+        for (target in QuickLaunch.targets(context)) {
+            entries += LauncherEntry(target.icon, isAction = false) {
+                QuickLaunch.open(context, target.packageName)
+            }
+        }
+        rotateIcon?.let { icon ->
+            entries += LauncherEntry(icon, isAction = true) { rotateScreen() }
+        }
+        return entries
+    }
+
+    /** Toggles the mirrored phone between portrait and landscape. */
+    private fun rotateScreen() {
+        if (!RotationLock.togglePortraitLandscape(context)) {
+            Log.w(TAG, "rotate: \"Modify system settings\" is not granted; opening it")
+            runCatching { context.startActivity(RotationLock.permissionIntent(context)) }
+                .onFailure { Log.w(TAG, "Could not open the write-settings screen", it) }
+        }
+    }
+
+    /** Rasterizes a vector drawable to a square bitmap for the strip. */
+    private fun rasterize(drawable: Drawable): Bitmap {
+        val bitmap = Bitmap.createBitmap(ACTION_ICON_PX, ACTION_ICON_PX, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, ACTION_ICON_PX, ACTION_ICON_PX)
+        drawable.draw(canvas)
+        return bitmap
+    }
 
     /**
      * Whether a transient host panel (media/assistant) is covering part of the surface right now.
@@ -422,19 +481,19 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             )
         }
 
-        val targets = QuickLaunch.targets(context)
+        val entries = launcherEntries()
         val cell = thickness
-        val cells = ArrayList<Pair<RectF, LaunchTarget>>(targets.size)
+        val cells = ArrayList<Pair<RectF, LauncherEntry>>(entries.size)
         if (atBottom) {
-            var left = strip.centerX() - cell * targets.size / 2f
-            for (target in targets) {
-                cells += RectF(left, strip.top, left + cell, strip.bottom) to target
+            var left = strip.centerX() - cell * entries.size / 2f
+            for (entry in entries) {
+                cells += RectF(left, strip.top, left + cell, strip.bottom) to entry
                 left += cell
             }
         } else {
-            var top = strip.centerY() - cell * targets.size / 2f
-            for (target in targets) {
-                cells += RectF(strip.left, top, strip.right, top + cell) to target
+            var top = strip.centerY() - cell * entries.size / 2f
+            for (entry in entries) {
+                cells += RectF(strip.left, top, strip.right, top + cell) to entry
                 top += cell
             }
         }
@@ -447,10 +506,11 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         canvas.drawRect(layout.strip, launcherPaint)
 
         val iconSize = px(LAUNCHER_ICON_DP, density)
-        for ((cell, target) in layout.cells) {
-            val icon = target.icon ?: continue
+        for ((cell, entry) in layout.cells) {
+            val icon = entry.icon ?: continue
             val cx = cell.centerX()
             val cy = cell.centerY()
+            if (entry.isAction) canvas.drawCircle(cx, cy, iconSize * 0.62f, actionPaint)
             canvas.drawBitmap(
                 icon,
                 null,
@@ -498,6 +558,12 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
         /** Near-black bar behind the icons. */
         val PANEL_COLOR = 0xF21B1B1B.toInt()
+
+        /** Faint disc behind action cells so they read as buttons. */
+        val ACTION_COLOR = 0x33FFFFFF
+
+        /** The rotate glyph is rasterized at this edge, then scaled to the cell. */
+        const val ACTION_ICON_PX = 128
         // endregion
     }
 }

@@ -69,6 +69,51 @@ object RotationLock {
         }
     }
 
+    /**
+     * Forces the display to the opposite orientation (portrait <-> landscape) for the car
+     * session, turning auto-rotate off, and remembers the previous auto-rotate value for [unlock].
+     * This is what the car launcher's rotate button calls. False without the required access.
+     */
+    fun togglePortraitLandscape(context: Context): Boolean {
+        if (!isAllowed(context)) return false
+        val resolver = context.contentResolver
+        val prefs = Settings.prefs(context)
+
+        if (!prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)) {
+            prefs.edit()
+                .putInt(
+                    Settings.KEY_AUTOROTATE_BACKUP,
+                    AndroidSettings.System.getInt(
+                        resolver,
+                        AndroidSettings.System.ACCELEROMETER_ROTATION,
+                        1,
+                    ),
+                )
+                .apply()
+        }
+
+        val current = try {
+            AndroidSettings.System.getInt(resolver, USER_ROTATION, Surface.ROTATION_0)
+        } catch (t: Throwable) {
+            Surface.ROTATION_0
+        }
+        val landscape = current == Surface.ROTATION_90 || current == Surface.ROTATION_270
+        val next = if (landscape) Surface.ROTATION_0 else Surface.ROTATION_90
+
+        return try {
+            AndroidSettings.System.putInt(
+                resolver,
+                AndroidSettings.System.ACCELEROMETER_ROTATION,
+                0,
+            )
+            AndroidSettings.System.putInt(resolver, USER_ROTATION, next)
+            true
+        } catch (t: Throwable) {
+            Log.w(TAG, "Could not rotate the display", t)
+            false
+        }
+    }
+
     /** Restores the auto-rotate setting saved by [lockLandscape]. No-op if we never locked. */
     fun unlock(context: Context) {
         if (!isAllowed(context)) return

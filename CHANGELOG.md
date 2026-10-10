@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.24
+- The car quick launch strip now has a rotate button that flips the mirrored phone between portrait and landscape
+
 ## 1.23
 - The car quick launch menu is now a slim icon-only strip that never covers the mirror: a column on the right, or along the bottom when a media/assistant panel is open
 

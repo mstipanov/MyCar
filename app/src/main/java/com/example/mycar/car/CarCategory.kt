@@ -22,9 +22,9 @@ enum class CarCategory {
     WEATHER;
 
     companion object {
-        /** The stored value, or [NAVIGATION] when it is missing or unknown. */
+        /** The stored value, or [WEATHER] when it is missing or unknown. */
         fun fromStored(value: String?): CarCategory =
-            entries.firstOrNull { it.name == value } ?: NAVIGATION
+            entries.firstOrNull { it.name == value } ?: WEATHER
 
         /** Enables the service for [category] and disables the other one. Idempotent. */
         fun register(context: Context, category: CarCategory) {

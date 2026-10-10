@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.29
+- MyCar now registers as an Android Auto **weather** app by default, so Google Maps/Waze keep the navigation slot while the mirror is on screen; choose Navigation in the app if you would rather Android Auto auto-open MyCar
+
 ## 1.28
 - The Android Auto category is now selectable in the app: Navigation (default) or Weather. Switching takes effect when Android Auto reconnects
 

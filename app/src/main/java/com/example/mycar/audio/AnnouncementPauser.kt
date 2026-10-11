@@ -19,9 +19,9 @@ import com.example.mycar.auto.CarConnectionWatcher
  * navigation guidance / accessibility / notification / notification event — not a specific
  * package; that also covers Maps and Waze.
  *
- * [status] records what happened at the last announcement so the settings screen can show it; that
- * is how a mismatch (an unexpected usage, missing Notification access) is diagnosed on a phone
- * without logcat.
+ * [status] reports the last audio usages seen and what the last announcement did, so the settings
+ * screen can show why it did or did not act — a mismatch (an unexpected usage, missing
+ * Notification access, not projecting) is diagnosable on the phone without logcat.
  */
 object AnnouncementPauser {
 
@@ -48,10 +48,22 @@ object AnnouncementPauser {
     private var announcementActive = false
     private var pausedByUs = false
 
-    /** What happened at the last announcement (or the watching state), for the settings screen. */
+    /** The active audio usages at the last change, for the settings-screen diagnostic. */
     @Volatile
-    var status: String? = null
-        private set
+    private var lastUsages: Set<Int> = emptySet()
+
+    /** What the last announcement did, or null if none has been seen. */
+    @Volatile
+    private var lastAction: String? = null
+
+    /** One-line diagnostic for the settings screen; null when not watching. */
+    val status: String?
+        get() {
+            if (audioManager == null) return null
+            val usages = if (lastUsages.isEmpty()) "none" else lastUsages.sorted().joinToString(",")
+            val action = lastAction ?: "no announcement seen yet"
+            return "Audio usages: $usages — $action"
+        }
 
     private val resume = Runnable {
         if (!announcementActive && pausedByUs) {
@@ -74,16 +86,12 @@ object AnnouncementPauser {
     fun start(context: Context) {
         val ctx = context.applicationContext
         appContext = ctx
-        if (!Settings.pauseForAnnouncements(ctx)) {
-            status = null
-            return
-        }
+        if (!Settings.pauseForAnnouncements(ctx)) return
         if (audioManager != null) return
         audioManager = ctx.getSystemService(AudioManager::class.java)?.also {
             it.registerAudioPlaybackCallback(callback, handler)
             Log.i(TAG, "watching for announcements")
         }
-        if (status == null) status = "Watching for announcements…"
     }
 
     /** Stops watching and lets any media we paused play again. Idempotent. */
@@ -95,12 +103,14 @@ object AnnouncementPauser {
         if (pausedByUs) MediaControlService.resumePausedMedia()
         pausedByUs = false
         announcementActive = false
-        status = null
+        lastUsages = emptySet()
+        lastAction = null
     }
 
     private fun onConfigs(configs: List<AudioPlaybackConfiguration>) {
         // getActivePlaybackConfigurations() only lists *active* players, so presence is the signal.
         val activeUsages = configs.map { it.audioAttributes.usage }.toSet()
+        lastUsages = activeUsages
         Log.d(TAG, "active usages: $activeUsages")
 
         val announcementUsage = activeUsages.firstOrNull { it in ANNOUNCEMENT_USAGES }
@@ -121,20 +131,22 @@ object AnnouncementPauser {
     }
 
     private fun act(usage: Int, mediaPlaying: Boolean) {
-        status = when {
-            !shouldAct() -> "Announcement (usage $usage): not mirroring"
-            !mediaPlaying -> "Announcement (usage $usage): no media was playing"
-            !MediaControlService.isConnected -> "Announcement (usage $usage): grant notification access"
+        val action = when {
+            !shouldAct() -> "announcement (usage $usage): not mirroring"
+            !mediaPlaying -> "announcement (usage $usage): no media was playing"
+            !MediaControlService.isConnected ->
+                "announcement (usage $usage): grant notification access"
             else -> {
                 pausedByUs = MediaControlService.pausePlayingMedia()
                 if (pausedByUs) {
-                    "Announcement (usage $usage): media paused"
+                    "announcement (usage $usage): media paused"
                 } else {
-                    "Announcement (usage $usage): found no playing media session"
+                    "announcement (usage $usage): found no playing media session"
                 }
             }
         }
-        Log.i(TAG, "status: $status")
+        lastAction = action
+        Log.i(TAG, action)
     }
 
     /** Only act while the car is actually showing us. */

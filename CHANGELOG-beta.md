@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta4
+- The announcement-pause diagnostic now always shows the audio usages MyCar sees, so an unmatched announcement is diagnosable instead of silent
+
 ## 1.33-beta3
 - "Pause media during announcements" now also starts when you switch it on mid-session, and shows a diagnostic line with what the last announcement did (which audio usage it saw, and whether it paused)
 

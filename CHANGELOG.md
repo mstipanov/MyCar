@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.30
+- New "Close an app when Android Auto disconnects": pick an app and MyCar closes it when the car disconnects; tick "Force stop it" to stop its media and background work too (needs the accessibility service)
+
 ## 1.29
 - MyCar now registers as an Android Auto **weather** app by default, so Google Maps/Waze keep the navigation slot while the mirror is on screen; choose Navigation in the app if you would rather Android Auto auto-open MyCar
 

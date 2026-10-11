@@ -160,6 +160,12 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   opens it as soon as the mirror is live, so the car screen shows that app instead of the phone's
   home screen. When it fires from the background it uses the same *Display over other apps*
   permission; the chosen package and label are stored in the app's settings.
+* **Close an app when Android Auto disconnects** — pick an app and MyCar closes it once the car
+  disconnects. By default it reaps the app's background process (Android 13 and below) and, when
+  the app is the one on screen, leaves it through the accessibility service. Tick *Force stop it*
+  to really stop the app — media and background work included — by driving the app-info screen's
+  *Force stop*, which needs the phone awake and unlocked. See
+  [Hands-free start](#hands-free-start).
 * **Show the quick launch menu on the car screen** — a slim, icon-only strip of shortcuts beside
   the mirror: a column on the right, or along the bottom while the media panel is open. The strip
   gets its own space, so it never covers the mirror. Tapping an icon opens that phone app (needs
@@ -179,7 +185,8 @@ When **Start automatically when Android Auto connects** is on, a small foregroun
 (`auto/CarConnectionWatcher`) subscribes to Android Auto's connection feed. The moment the car
 connects it launches the phone UI, which asks for capture; the app then presses Share for you.
 When the car disconnects it stops capture again, so nothing keeps mirroring to a car that is
-gone. If capture stops by itself while the car is still connected — a phone call, a screen lock
+gone, and closes the app chosen under *Close an app when Android Auto disconnects*, if any. If
+capture stops by itself while the car is still connected — a phone call, a screen lock
 — MyCar asks for it again and reopens the chosen app once the phone is awake and unlocked. Three
 pieces make the connect side work, in order of importance:
 

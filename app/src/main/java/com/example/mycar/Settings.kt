@@ -14,6 +14,7 @@ object Settings {
     const val KEY_AUTO_START = "autoStart"
     const val KEY_START_APP_PACKAGE = "startAppPackage"
     const val KEY_START_APP_LABEL = "startAppLabel"
+    const val KEY_START_APPS = "startApps"
     const val KEY_SCALE_MODE = "scaleMode"
     const val KEY_QUICK_LAUNCH = "quickLaunch"
     const val KEY_LAUNCHER_APPS = "launcherApps"
@@ -140,21 +141,29 @@ object Settings {
     }
 
     /**
-     * Package of the app to open once mirroring starts, or blank for none. A label is stored
-     * alongside it purely so the settings button can show what is selected.
+     * Packages of the apps to open once mirroring starts, in launch order: each is started in
+     * turn, so the last one ends up in the foreground and the earlier ones run behind it. Empty
+     * means "open nothing". A choice made with an older build (the single [KEY_START_APP_PACKAGE])
+     * is migrated on first read.
      */
-    fun startAppPackage(context: Context): String =
-        prefs(context).getString(KEY_START_APP_PACKAGE, "").orEmpty()
-
-    fun startAppLabel(context: Context): String =
-        prefs(context).getString(KEY_START_APP_LABEL, "").orEmpty()
-
-    fun setStartApp(context: Context, packageName: String, label: String) {
-        prefs(context).edit()
-            .putString(KEY_START_APP_PACKAGE, packageName)
-            .putString(KEY_START_APP_LABEL, label)
-            .apply()
+    fun startAppPackages(context: Context): List<String> {
+        val stored = prefs(context).getString(KEY_START_APPS, null) ?: return legacyStartApp(context)
+        return runCatching {
+            val array = JSONArray(stored)
+            (0 until array.length()).map { array.getString(it) }
+        }.getOrDefault(emptyList())
     }
+
+    fun setStartAppPackages(context: Context, packages: List<String>) {
+        val array = JSONArray()
+        packages.forEach { array.put(it) }
+        prefs(context).edit().putString(KEY_START_APPS, array.toString()).apply()
+    }
+
+    /** The pre-list single choice, read once so an upgrade keeps the app it had picked. */
+    private fun legacyStartApp(context: Context): List<String> =
+        prefs(context).getString(KEY_START_APP_PACKAGE, "").orEmpty()
+            .let { if (it.isBlank()) emptyList() else listOf(it) }
 
     /**
      * Whether the app chosen below should be closed when Android Auto disconnects. Off by

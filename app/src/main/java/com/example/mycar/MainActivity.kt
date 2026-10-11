@@ -201,7 +201,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         startAppButton = findViewById(R.id.start_app)
-        startAppButton.setOnClickListener { showStartAppPicker() }
+        startAppButton.setOnClickListener { showStartAppsEditor() }
         updateStartAppUi()
 
         // Close-on-disconnect. The app is closed by CarConnectionWatcher when Android Auto drops;
@@ -345,13 +345,13 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
     }
 
-    /** Shows what app will be opened once mirroring starts, or the prompt when none is set. */
+    /** Shows how many apps will open once mirroring starts, or the prompt when none is set. */
     private fun updateStartAppUi() {
-        val label = Settings.startAppLabel(this)
-        if (label.isBlank()) {
-            startAppButton.setText(R.string.start_app)
+        val count = Settings.startAppPackages(this).size
+        startAppButton.text = if (count == 0) {
+            getString(R.string.start_app)
         } else {
-            startAppButton.text = getString(R.string.start_app_selected, label)
+            getString(R.string.start_apps_count, count)
         }
     }
 
@@ -371,12 +371,6 @@ class MainActivity : AppCompatActivity() {
             closeAppButton.text = getString(R.string.close_app_selected, label)
         }
     }
-
-    private fun showStartAppPicker() =
-        showAppPicker(R.string.start_app, R.string.start_app_none) { packageName, label ->
-            Settings.setStartApp(this, packageName, label)
-            updateStartAppUi()
-        }
 
     private fun showCloseAppPicker() =
         showAppPicker(R.string.close_app_pick_title, R.string.close_app_none) { packageName, label ->
@@ -446,25 +440,42 @@ class MainActivity : AppCompatActivity() {
     private fun currentLauncherApps(): List<String> =
         Settings.launcherApps(this) ?: Settings.DEFAULT_LAUNCHER_APPS
 
-    /** Editor for the car launcher: reorder with up/down, remove, and add apps. Saves on change. */
+    /** Editor for the car launcher's shortcuts. */
     private fun showLauncherEditor() {
         val entries = currentLauncherEntries().toMutableList()
-        val adapter = LauncherEditorAdapter(entries)
+        showAppListEditor(R.string.manage_launcher_apps, entries) { saveLauncherEntries(entries) }
+    }
 
+    /** Editor for the apps opened when mirroring starts; the last one ends up on screen. */
+    private fun showStartAppsEditor() {
+        val entries = startAppEntries().toMutableList()
+        showAppListEditor(R.string.start_app, entries) { saveStartAppEntries(entries) }
+    }
+
+    /**
+     * Editor shared by the launcher and the start-apps list: an ordered app list with up/down,
+     * remove, and add. [onChanged] persists the list after every change.
+     */
+    private fun showAppListEditor(
+        titleRes: Int,
+        entries: MutableList<Pair<String, String>>,
+        onChanged: () -> Unit,
+    ) {
+        val adapter = AppListEditorAdapter(entries, onChanged)
         val view = layoutInflater.inflate(R.layout.dialog_launcher, null)
         view.findViewById<ListView>(R.id.launcher_list).adapter = adapter
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.manage_launcher_apps)
+            .setTitle(titleRes)
             .setView(view)
             .setPositiveButton(android.R.string.ok, null)
             .create()
 
         view.findViewById<Button>(R.id.add_app).setOnClickListener {
-            showAddLauncherApp { packageName, label ->
+            showAddApp(entries.map { it.first }.toSet()) { packageName, label ->
                 entries.add(packageName to label)
                 adapter.notifyDataSetChanged()
-                saveLauncherEntries(entries)
+                onChanged()
             }
         }
 
@@ -477,14 +488,24 @@ class MainActivity : AppCompatActivity() {
         return currentLauncherApps().mapNotNull { pkg -> labels[pkg]?.let { pkg to it } }
     }
 
+    /** The start apps in order, resolved to (package, label); uninstalled ones are dropped. */
+    private fun startAppEntries(): List<Pair<String, String>> {
+        val labels = launchableApps().toMap()
+        return Settings.startAppPackages(this).mapNotNull { pkg -> labels[pkg]?.let { pkg to it } }
+    }
+
     private fun saveLauncherEntries(entries: List<Pair<String, String>>) {
         Settings.setLauncherApps(this, entries.map { it.first })
         updateLauncherAppsUi()
     }
 
-    /** Single-select picker for an app to append to the launcher. */
-    private fun showAddLauncherApp(onPicked: (String, String) -> Unit) {
-        val existing = currentLauncherApps().toSet()
+    private fun saveStartAppEntries(entries: List<Pair<String, String>>) {
+        Settings.setStartAppPackages(this, entries.map { it.first })
+        updateStartAppUi()
+    }
+
+    /** Single-select picker for an app to append to a list, hiding ones already in [existing]. */
+    private fun showAddApp(existing: Set<String>, onPicked: (String, String) -> Unit) {
         val apps = launchableApps().filter { it.first !in existing }
         val view = layoutInflater.inflate(R.layout.dialog_app_picker, null)
         val search = view.findViewById<EditText>(R.id.search)
@@ -519,9 +540,10 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    /** Binds the launcher entries to rows with up/down/remove, persisting after every change. */
-    private inner class LauncherEditorAdapter(
+    /** Binds the editor's entries to rows with up/down/remove, persisting after every change. */
+    private inner class AppListEditorAdapter(
         private val entries: MutableList<Pair<String, String>>,
+        private val onChanged: () -> Unit,
     ) : BaseAdapter() {
 
         override fun getCount(): Int = entries.size
@@ -551,7 +573,7 @@ class MainActivity : AppCompatActivity() {
             row.findViewById<ImageButton>(R.id.remove).setOnClickListener {
                 entries.removeAt(position)
                 notifyDataSetChanged()
-                saveLauncherEntries(entries)
+                onChanged()
             }
             return row
         }
@@ -560,7 +582,7 @@ class MainActivity : AppCompatActivity() {
             if (to < 0 || to >= entries.size) return
             entries.add(to, entries.removeAt(from))
             notifyDataSetChanged()
-            saveLauncherEntries(entries)
+            onChanged()
         }
     }
 

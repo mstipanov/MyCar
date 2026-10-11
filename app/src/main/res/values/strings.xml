@@ -16,9 +16,8 @@
     <string name="scale_fill">Fill: crop to fill the whole area</string>
     <string name="auto_start">Start automatically when Android Auto connects</string>
     <string name="auto_start_hint">Needs “Display over other apps” and the accessibility service below. Mirroring stops by itself when Android Auto disconnects.</string>
-    <string name="start_app">Open an app when mirroring starts</string>
-    <string name="start_app_selected">Open when mirroring starts: %1$s</string>
-    <string name="start_app_none">Don\'t open any app</string>
+    <string name="start_app">Open apps when mirroring starts</string>
+    <string name="start_apps_count">Open when mirroring starts: %1$d</string>
     <string name="start_app_search">Search apps</string>
     <string name="close_app">Close an app when Android Auto disconnects</string>
     <string name="close_app_hint">Needs the accessibility service below: it leaves the app, or force stops it if you choose that. Without it, Android only lets MyCar reap the app\'s background process (Android 13 and below).</string>
@@ -45,7 +44,7 @@
     <string name="car_category_weather">Weather (leaves the navigation slot free)</string>
     <string name="car_category_hint">Takes effect when Android Auto reconnects.</string>
 
-    <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects and stops when it disconnects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. If capture stops on its own while connected (a phone call or a screen lock), MyCar asks for it again and reopens the chosen app. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
+    <string name="help_text">With auto-start on, mirroring begins by itself when Android Auto connects and stops when it disconnects. Otherwise tap Start mirroring, then open MyCar from the Android Auto launcher in your car. If capture stops on its own while connected (a phone call or a screen lock), MyCar asks for it again and reopens the chosen apps. Android asks for capture permission again every time capture is stopped.\n\nApps that set FLAG_SECURE (banking, DRM video, some password fields) will appear black.</string>
 
     <string name="mirror_notification_channel">Screen mirroring</string>
     <string name="mirror_notification_title">Mirroring to car display</string>

@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.31-beta1
+- "Open an app when mirroring starts" is now a list: pick several apps and MyCar opens them one after another, so the last one is on screen and the others run behind it
+
 ## 1.30-beta1
 - New "Close an app when Android Auto disconnects": pick an app and MyCar closes it when the car disconnects; tick "Force stop it" to stop its media and background work too (needs the accessibility service)
 

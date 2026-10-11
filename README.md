@@ -156,10 +156,11 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
 * **Start automatically when Android Auto connects** — the mirror appears without touching the
   phone, and mirroring stops by itself once Android Auto disconnects. See
   [Hands-free start](#hands-free-start).
-* **Open an app when mirroring starts** — pick any installed app (navigation, music, …) and MyCar
-  opens it as soon as the mirror is live, so the car screen shows that app instead of the phone's
-  home screen. When it fires from the background it uses the same *Display over other apps*
-  permission; the chosen package and label are stored in the app's settings.
+* **Open apps when mirroring starts** — pick one or more installed apps (navigation, music, …)
+  and MyCar opens them as soon as the mirror is live, one after another, so the last one in the
+  list is the app on screen and the earlier ones run behind it. When it fires from the background
+  it uses the same *Display over other apps* permission; the chosen packages are stored in the
+  app's settings.
 * **Close an app when Android Auto disconnects** — pick an app and MyCar closes it once the car
   disconnects. By default it reaps the app's background process (Android 13 and below) and, when
   the app is the one on screen, leaves it through the accessibility service. Tick *Force stop it*
@@ -187,7 +188,7 @@ connects it launches the phone UI, which asks for capture; the app then presses 
 When the car disconnects it stops capture again, so nothing keeps mirroring to a car that is
 gone, and closes the app chosen under *Close an app when Android Auto disconnects*, if any. If
 capture stops by itself while the car is still connected — a phone call, a screen lock
-— MyCar asks for it again and reopens the chosen app once the phone is awake and unlocked. Three
+— MyCar asks for it again and reopens the chosen apps once the phone is awake and unlocked. Three
 pieces make the connect side work, in order of importance:
 
 1. **Display over other apps** (`SYSTEM_ALERT_WINDOW`) — required, because the app is in the

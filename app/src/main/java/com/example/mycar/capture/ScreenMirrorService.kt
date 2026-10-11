@@ -170,29 +170,34 @@ class ScreenMirrorService : Service() {
         isRunning = true
         applyKeepScreenOn()
         applyRotationLock()
-        openStartApp()
+        openStartApps()
     }
 
     /**
-     * Opens the user's chosen app once mirroring is live, so the car mirror settles on it instead
-     * of the phone's home screen. The launch is delayed slightly to let the capture prompt finish.
-     * Firing from the background (auto-start) needs "Display over other apps".
+     * Opens the user's chosen apps once mirroring is live, so the car mirror settles on them
+     * instead of the phone's home screen. They are started one after another, each waiting
+     * [START_APP_GAP_MS], so the last one in the list is the app left on screen and the earlier
+     * ones run behind it. The first launch is delayed to let the capture prompt finish. Firing
+     * from the background (auto-start) needs "Display over other apps".
      */
-    private fun openStartApp() {
-        val packageName = Settings.startAppPackage(this)
-        if (packageName.isBlank()) return
-        val launch = packageManager.getLaunchIntentForPackage(packageName) ?: return
-        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        Handler(mainLooper).postDelayed({
-            runCatching { startActivity(launch) }
-                .onFailure { Log.w(TAG, "Could not open $packageName", it) }
-        }, START_APP_DELAY_MS)
+    private fun openStartApps() {
+        val packages = Settings.startAppPackages(this)
+        if (packages.isEmpty()) return
+        val handler = Handler(mainLooper)
+        packages.forEachIndexed { index, packageName ->
+            val launch = packageManager.getLaunchIntentForPackage(packageName) ?: return@forEachIndexed
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            handler.postDelayed({
+                runCatching { startActivity(launch) }
+                    .onFailure { Log.w(TAG, "Could not open $packageName", it) }
+            }, START_APP_DELAY_MS + index * START_APP_GAP_MS)
+        }
     }
 
     /**
      * Capture was ended by the system rather than by the user: the screen locked, the phone went
      * to sleep, or a call came in. Mirroring is meant to follow the car, so ask for capture again
-     * and let [openStartApp] reopen the configured app. A phone call usually stops capture while
+     * and let [openStartApps] reopen the chosen apps. A phone call usually stops capture while
      * the screen is off or the phone is locked, when the consent prompt could not be answered, so
      * keep retrying until the phone is awake and unlocked. Give up if Android Auto goes away
      * first, or after [RECOVERY_ATTEMPTS] tries.
@@ -472,8 +477,11 @@ class ScreenMirrorService : Service() {
         private const val EXTRA_RESULT_CODE = "resultCode"
         private const val EXTRA_RESULT_DATA = "resultData"
 
-        /** Grace period before opening the chosen app, so the capture prompt can close first. */
+        /** Grace period before opening the chosen apps, so the capture prompt can close first. */
         private const val START_APP_DELAY_MS = 800L
+
+        /** Gap between opening the chosen apps, so each one settles before the next comes up. */
+        private const val START_APP_GAP_MS = 1_200L
 
         /** Delay before a recovery attempt, and between attempts, after the system stops capture. */
         private const val RECOVERY_RETRY_MS = 2_000L

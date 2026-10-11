@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher editor: the ordered shortcuts with up/down/remove, plus an Add app button. -->
+<!-- Ordered app-list editor (car launcher and start-apps): up/down/remove rows plus an Add app
+     button. The dialog title is set by the caller. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"

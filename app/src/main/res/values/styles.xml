@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reusable styles for the phone settings screen and its dialogs. -->
+<resources>
+
+    <!-- Base for the dotted names below. AAPT reads "MyCar.Card" as inheriting "MyCar", so this
+         has to exist even though it carries nothing. -->
+    <style name="MyCar" />
+
+    <!-- A settings section: a white, rounded panel. Applied to the card's LinearLayout. -->
+    <style name="MyCar.Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:background">@drawable/bg_card</item>
+    </style>
+
+    <!-- Small uppercase caption heading a card. -->
+    <style name="MyCar.SectionCaption">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textColor">@color/mycar_accent</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- A bold in-card field label, e.g. "Car screen scaling". -->
+    <style name="MyCar.FieldLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:textColor">@color/mycar_text</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Muted explanatory text under a control. -->
+    <style name="MyCar.Hint">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:textColor">@color/mycar_text_muted</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Full-width button with a little breathing room. -->
+    <style name="MyCar.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+    </style>
+
+    <!-- The filled, accent-coloured call to action. -->
+    <style name="MyCar.Button.Primary" parent="MyCar.Button">
+        <item name="android:backgroundTint">@color/mycar_accent</item>
+        <item name="android:textColor">@color/mycar_on_accent</item>
+    </style>
+
+</resources>

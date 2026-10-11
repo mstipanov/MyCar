@@ -5,6 +5,11 @@
     <string name="status_running">Mirroring this device\'s screen to the car.</string>
     <string name="status_declined">Screen capture permission was declined.</string>
 
+    <string name="section_mirroring">Mirroring</string>
+    <string name="section_hands_free">Hands-free</string>
+    <string name="section_car_screen">Car screen</string>
+    <string name="section_updates">Updates</string>
+
     <string name="start_mirroring">Start mirroring</string>
     <string name="stop_mirroring">Stop mirroring</string>
     <string name="keep_screen_on">Keep the screen on while mirroring</string>
@@ -35,6 +40,7 @@
     <string name="manage_launcher_apps">Choose launcher apps</string>
     <string name="manage_launcher_apps_count">Launcher apps: %1$d</string>
     <string name="add_launcher_app">Add app</string>
+    <string name="editor_empty">No apps yet — tap “Add app”.</string>
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
     <string name="remove">Remove</string>

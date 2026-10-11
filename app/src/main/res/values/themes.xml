@@ -3,6 +3,16 @@
         Must be an AppCompat theme: MainActivity extends AppCompatActivity, which throws
         "You need to use a Theme.AppCompat theme (or descendant) with this activity" on boot
         when the theme is a plain framework theme such as android:Theme.Material.*.
+
+        No action bar: the screen draws its own header (app name + status), so the bar would
+        only duplicate the title.
     -->
-    <style name="Theme.MyCar" parent="Theme.AppCompat.Light.DarkActionBar"/>
+    <style name="Theme.MyCar" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/mycar_header</item>
+        <item name="colorPrimaryDark">@color/mycar_header_dark</item>
+        <item name="colorAccent">@color/mycar_accent</item>
+        <item name="android:windowBackground">@color/mycar_background</item>
+        <item name="android:textColorPrimary">@color/mycar_text</item>
+        <item name="android:textColorSecondary">@color/mycar_text_muted</item>
+    </style>
 </resources>

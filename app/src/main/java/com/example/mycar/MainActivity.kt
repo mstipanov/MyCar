@@ -461,9 +461,20 @@ class MainActivity : AppCompatActivity() {
         entries: MutableList<Pair<String, String>>,
         onChanged: () -> Unit,
     ) {
-        val adapter = AppListEditorAdapter(entries, onChanged)
         val view = layoutInflater.inflate(R.layout.dialog_launcher, null)
-        view.findViewById<ListView>(R.id.launcher_list).adapter = adapter
+        val list = view.findViewById<ListView>(R.id.launcher_list)
+        val empty = view.findViewById<TextView>(R.id.empty)
+
+        // The adapter saves through onChanged after every change; it also drives the empty state.
+        fun refreshEmpty() {
+            empty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+        }
+        val adapter = AppListEditorAdapter(entries) {
+            onChanged()
+            refreshEmpty()
+        }
+        list.adapter = adapter
+        refreshEmpty()
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(titleRes)
@@ -476,6 +487,7 @@ class MainActivity : AppCompatActivity() {
                 entries.add(packageName to label)
                 adapter.notifyDataSetChanged()
                 onChanged()
+                refreshEmpty()
             }
         }
 

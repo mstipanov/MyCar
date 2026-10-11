@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ordered app-list editor (car launcher and start-apps): up/down/remove rows plus an Add app
-     button. The dialog title is set by the caller. -->
+<!-- Ordered app-list editor (car launcher and start-apps): up/down/remove rows, an empty-state
+     message, and an Add app button. The dialog title is set by the caller. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -11,13 +11,24 @@
     <ListView
         android:id="@+id/launcher_list"
         android:layout_width="match_parent"
-        android:layout_height="300dp" />
+        android:layout_height="300dp"
+        android:divider="@color/mycar_stroke"
+        android:dividerHeight="1dp" />
+
+    <TextView
+        android:id="@+id/empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp"
+        android:text="@string/editor_empty"
+        android:textColor="@color/mycar_text_muted"
+        android:visibility="gone" />
 
     <Button
         android:id="@+id/add_app"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        style="@style/MyCar.Button"
         android:text="@string/add_launcher_app" />
 
 </LinearLayout>

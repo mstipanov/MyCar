@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Palette for the phone settings screen. Light-only for now: the app ships a single (values/)
+     resource set, so there is no dark variant to keep in step. -->
+<resources>
+    <!-- Brand -->
+    <color name="mycar_header">#0E2A47</color>
+    <color name="mycar_header_dark">#123A63</color>
+    <color name="mycar_accent">#2F7DF6</color>
+
+    <!-- Surfaces -->
+    <color name="mycar_background">#F4F6F9</color>
+    <color name="mycar_surface">#FFFFFF</color>
+    <color name="mycar_stroke">#E3E7EE</color>
+
+    <!-- Text -->
+    <color name="mycar_text">#1B2733</color>
+    <color name="mycar_text_muted">#6B7684</color>
+    <color name="mycar_on_header">#FFFFFF</color>
+    <color name="mycar_on_header_muted">#B9C6D6</color>
+    <color name="mycar_on_accent">#FFFFFF</color>
+</resources>

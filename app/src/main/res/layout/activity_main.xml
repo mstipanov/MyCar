@@ -1,240 +1,257 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Wrapped in a ScrollView: with the landscape lock on, the phone is usually held in landscape,
-    where this column is taller than the screen and the update controls used to fall off the
-    bottom. fillViewport keeps the portrait look (content vertically centred) while making
-    everything reachable in landscape.
+    The phone companion screen, as a fixed header (app name + live status) over a scrollable column
+    of settings cards. A ScrollView is still required: with the landscape lock on the phone is
+    usually held in landscape, where the column is taller than the screen.
 -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="@color/mycar_background">
 
     <LinearLayout
+        android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center"
-        android:padding="24dp">
+        android:background="@drawable/bg_header"
+        android:paddingStart="24dp"
+        android:paddingTop="28dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="24dp">
 
         <TextView
             android:id="@+id/title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
-            android:textSize="22sp"
+            android:textColor="@color/mycar_on_header"
+            android:textSize="24sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="center"
-            android:text="@string/status_idle" />
-
-        <Button
-            android:id="@+id/start"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/start_mirroring" />
-
-        <Button
-            android:id="@+id/stop"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:enabled="false"
-            android:text="@string/stop_mirroring" />
-
-        <CheckBox
-            android:id="@+id/keep_screen_on"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/keep_screen_on" />
-
-        <CheckBox
-            android:id="@+id/lock_landscape"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/lock_landscape" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/scale_mode"
-            android:textStyle="bold" />
-
-        <RadioGroup
-            android:id="@+id/scale_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <RadioButton
-                android:id="@+id/scale_fit"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/scale_fit" />
-
-            <RadioButton
-                android:id="@+id/scale_fill_height"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/scale_fill_height" />
-
-            <RadioButton
-                android:id="@+id/scale_fill_width"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/scale_fill_width" />
-
-            <RadioButton
-                android:id="@+id/scale_fill"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/scale_fill" />
-        </RadioGroup>
-
-        <CheckBox
-            android:id="@+id/auto_start"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/auto_start" />
-
-        <TextView
-            android:id="@+id/auto_start_hint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textSize="12sp"
-            android:text="@string/auto_start_hint" />
-
-        <Button
-            android:id="@+id/start_app"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/start_app" />
-
-        <CheckBox
-            android:id="@+id/close_app"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/close_app" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textSize="12sp"
-            android:text="@string/close_app_hint" />
-
-        <Button
-            android:id="@+id/close_app_picker"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/close_app_pick" />
-
-        <CheckBox
-            android:id="@+id/close_app_hard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/close_app_hard" />
-
-        <CheckBox
-            android:id="@+id/touch_control"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/touch_control" />
-
-        <Button
-            android:id="@+id/accessibility_settings"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/open_accessibility_settings" />
-
-        <CheckBox
-            android:id="@+id/quick_launch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/quick_launch" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textSize="12sp"
-            android:text="@string/quick_launch_hint" />
-
-        <Button
-            android:id="@+id/manage_launcher_apps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/manage_launcher_apps" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/car_category"
-            android:textStyle="bold" />
-
-        <RadioGroup
-            android:id="@+id/category_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <RadioButton
-                android:id="@+id/category_navigation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/car_category_navigation" />
-
-            <RadioButton
-                android:id="@+id/category_weather"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/car_category_weather" />
-        </RadioGroup>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textSize="12sp"
-            android:text="@string/car_category_hint" />
-
-        <Button
-            android:id="@+id/check_updates"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/check_updates" />
-
-        <TextView
-            android:id="@+id/update_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:textSize="12sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:textSize="12sp"
-            android:text="@string/help_text" />
-
+            android:layout_marginTop="6dp"
+            android:text="@string/status_idle"
+            android:textColor="@color/mycar_on_header_muted"
+            android:textSize="14sp" />
     </LinearLayout>
 
-</ScrollView>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp">
+
+            <!-- Mirroring -->
+            <LinearLayout style="@style/MyCar.Card">
+
+                <TextView
+                    style="@style/MyCar.SectionCaption"
+                    android:text="@string/section_mirroring" />
+
+                <Button
+                    android:id="@+id/start"
+                    style="@style/MyCar.Button.Primary"
+                    android:text="@string/start_mirroring" />
+
+                <Button
+                    android:id="@+id/stop"
+                    style="@style/MyCar.Button"
+                    android:enabled="false"
+                    android:text="@string/stop_mirroring" />
+
+                <CheckBox
+                    android:id="@+id/keep_screen_on"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/keep_screen_on" />
+
+                <CheckBox
+                    android:id="@+id/lock_landscape"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/lock_landscape" />
+
+                <TextView
+                    style="@style/MyCar.FieldLabel"
+                    android:text="@string/scale_mode" />
+
+                <RadioGroup
+                    android:id="@+id/scale_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <RadioButton
+                        android:id="@+id/scale_fit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/scale_fit" />
+
+                    <RadioButton
+                        android:id="@+id/scale_fill_height"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/scale_fill_height" />
+
+                    <RadioButton
+                        android:id="@+id/scale_fill_width"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/scale_fill_width" />
+
+                    <RadioButton
+                        android:id="@+id/scale_fill"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/scale_fill" />
+                </RadioGroup>
+            </LinearLayout>
+
+            <!-- Hands-free: start and stop around Android Auto -->
+            <LinearLayout style="@style/MyCar.Card">
+
+                <TextView
+                    style="@style/MyCar.SectionCaption"
+                    android:text="@string/section_hands_free" />
+
+                <CheckBox
+                    android:id="@+id/auto_start"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/auto_start" />
+
+                <TextView
+                    android:id="@+id/auto_start_hint"
+                    style="@style/MyCar.Hint"
+                    android:text="@string/auto_start_hint" />
+
+                <Button
+                    android:id="@+id/start_app"
+                    style="@style/MyCar.Button"
+                    android:text="@string/start_app" />
+
+                <CheckBox
+                    android:id="@+id/close_app"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/close_app" />
+
+                <TextView
+                    style="@style/MyCar.Hint"
+                    android:text="@string/close_app_hint" />
+
+                <Button
+                    android:id="@+id/close_app_picker"
+                    style="@style/MyCar.Button"
+                    android:text="@string/close_app_pick" />
+
+                <CheckBox
+                    android:id="@+id/close_app_hard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/close_app_hard" />
+            </LinearLayout>
+
+            <!-- Car screen: touch, quick launch, category -->
+            <LinearLayout style="@style/MyCar.Card">
+
+                <TextView
+                    style="@style/MyCar.SectionCaption"
+                    android:text="@string/section_car_screen" />
+
+                <CheckBox
+                    android:id="@+id/touch_control"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/touch_control" />
+
+                <Button
+                    android:id="@+id/accessibility_settings"
+                    style="@style/MyCar.Button"
+                    android:text="@string/open_accessibility_settings" />
+
+                <CheckBox
+                    android:id="@+id/quick_launch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/quick_launch" />
+
+                <TextView
+                    style="@style/MyCar.Hint"
+                    android:text="@string/quick_launch_hint" />
+
+                <Button
+                    android:id="@+id/manage_launcher_apps"
+                    style="@style/MyCar.Button"
+                    android:text="@string/manage_launcher_apps" />
+
+                <TextView
+                    style="@style/MyCar.FieldLabel"
+                    android:text="@string/car_category" />
+
+                <RadioGroup
+                    android:id="@+id/category_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <RadioButton
+                        android:id="@+id/category_navigation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/car_category_navigation" />
+
+                    <RadioButton
+                        android:id="@+id/category_weather"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/car_category_weather" />
+                </RadioGroup>
+
+                <TextView
+                    style="@style/MyCar.Hint"
+                    android:text="@string/car_category_hint" />
+            </LinearLayout>
+
+            <!-- Updates -->
+            <LinearLayout style="@style/MyCar.Card">
+
+                <TextView
+                    style="@style/MyCar.SectionCaption"
+                    android:text="@string/section_updates" />
+
+                <Button
+                    android:id="@+id/check_updates"
+                    style="@style/MyCar.Button"
+                    android:text="@string/check_updates" />
+
+                <TextView
+                    android:id="@+id/update_status"
+                    style="@style/MyCar.Hint"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/MyCar.Hint"
+                android:layout_marginTop="16dp"
+                android:text="@string/help_text" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

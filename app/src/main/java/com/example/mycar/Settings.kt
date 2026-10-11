@@ -18,6 +18,10 @@ object Settings {
     const val KEY_QUICK_LAUNCH = "quickLaunch"
     const val KEY_LAUNCHER_APPS = "launcherApps"
     const val KEY_CAR_CATEGORY = "carCategory"
+    const val KEY_CLOSE_APP_PACKAGE = "closeAppPackage"
+    const val KEY_CLOSE_APP_LABEL = "closeAppLabel"
+    const val KEY_CLOSE_APP_ON_DISCONNECT = "closeAppOnDisconnect"
+    const val KEY_CLOSE_APP_HARD = "closeAppHard"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
@@ -149,6 +153,43 @@ object Settings {
         prefs(context).edit()
             .putString(KEY_START_APP_PACKAGE, packageName)
             .putString(KEY_START_APP_LABEL, label)
+            .apply()
+    }
+
+    /**
+     * Whether the app chosen below should be closed when Android Auto disconnects. Off by
+     * default. Leaving a foreground app needs the accessibility service; reaping a background
+     * process works without it but only up to Android 13 (see `AppCloser`).
+     */
+    fun closeAppOnDisconnect(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_CLOSE_APP_ON_DISCONNECT, false)
+
+    fun setCloseAppOnDisconnect(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_CLOSE_APP_ON_DISCONNECT, enabled).apply()
+    }
+
+    /**
+     * Whether to really force stop the app (stops its media and background work) instead of only
+     * leaving it / reaping its background process. Needs the accessibility service.
+     */
+    fun closeAppHard(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_CLOSE_APP_HARD, false)
+
+    fun setCloseAppHard(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_CLOSE_APP_HARD, enabled).apply()
+    }
+
+    /** Package of the app to close when Android Auto disconnects, or blank for none. */
+    fun closeAppPackage(context: Context): String =
+        prefs(context).getString(KEY_CLOSE_APP_PACKAGE, "").orEmpty()
+
+    fun closeAppLabel(context: Context): String =
+        prefs(context).getString(KEY_CLOSE_APP_LABEL, "").orEmpty()
+
+    fun setCloseApp(context: Context, packageName: String, label: String) {
+        prefs(context).edit()
+            .putString(KEY_CLOSE_APP_PACKAGE, packageName)
+            .putString(KEY_CLOSE_APP_LABEL, label)
             .apply()
     }
 

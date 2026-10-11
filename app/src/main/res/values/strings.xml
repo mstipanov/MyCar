@@ -20,6 +20,13 @@
     <string name="start_app_selected">Open when mirroring starts: %1$s</string>
     <string name="start_app_none">Don\'t open any app</string>
     <string name="start_app_search">Search apps</string>
+    <string name="close_app">Close an app when Android Auto disconnects</string>
+    <string name="close_app_hint">Needs the accessibility service below: it leaves the app, or force stops it if you choose that. Without it, Android only lets MyCar reap the app\'s background process (Android 13 and below).</string>
+    <string name="close_app_pick">Choose app to close</string>
+    <string name="close_app_pick_title">Close when Android Auto disconnects</string>
+    <string name="close_app_selected">Close on disconnect: %1$s</string>
+    <string name="close_app_none">Don\'t close any app</string>
+    <string name="close_app_hard">Force stop it (stops media and background work)</string>
     <string name="touch_control">Control the phone from the car touchscreen</string>
     <string name="open_accessibility_settings">Enable touch control (Accessibility settings)</string>
     <string name="touch_control_enabled">Touch control is enabled</string>

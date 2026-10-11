@@ -19,6 +19,7 @@ import com.example.mycar.MainActivity
 import com.example.mycar.R
 import com.example.mycar.Settings
 import com.example.mycar.capture.ScreenMirrorService
+import com.example.mycar.launch.AppCloser
 
 /**
  * Watches Android Auto's connection state so mirroring follows the car, with no interaction.
@@ -79,7 +80,7 @@ class CarConnectionWatcher : Service() {
         wasConnected = connected
         when {
             connected && !was -> startMirroring()
-            !connected && was -> stopMirroring()
+            !connected && was -> onDisconnected()
         }
     }
 
@@ -102,9 +103,27 @@ class CarConnectionWatcher : Service() {
     }
 
     /**
-     * Falling edge: the car stopped projecting. Capture left running would keep mirroring into a
-     * car that is gone (and keep the screen awake and landscape-locked), so stop it. Auto-start
-     * covers the next connection; Android asks for capture consent again when it comes back.
+     * Falling edge: the car stopped projecting. Stop mirroring, and close the app the user chose,
+     * if any. Close runs regardless of whether mirroring was up, so it still works when the
+     * capture never started.
+     */
+    private fun onDisconnected() {
+        stopMirroring()
+        closeChosenApp()
+    }
+
+    private fun closeChosenApp() {
+        if (!Settings.closeAppOnDisconnect(this)) return
+        val packageName = Settings.closeAppPackage(this)
+        if (packageName.isBlank()) return
+        Log.i(TAG, "Android Auto disconnected; closing $packageName")
+        AppCloser.closeChosenApp(this)
+    }
+
+    /**
+     * Capture left running would keep mirroring into a car that is gone (and keep the screen awake
+     * and landscape-locked), so stop it. Auto-start covers the next connection; Android asks for
+     * capture consent again when it comes back.
      */
     private fun stopMirroring() {
         if (!ScreenMirrorService.isRunning) return

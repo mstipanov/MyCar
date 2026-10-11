@@ -54,6 +54,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var categoryGroup: RadioGroup
     private lateinit var autoStartView: CheckBox
     private lateinit var startAppButton: Button
+    private lateinit var closeAppView: CheckBox
+    private lateinit var closeAppButton: Button
+    private lateinit var closeAppHardView: CheckBox
     private lateinit var accessibilityButton: Button
 
     private lateinit var updates: UpdateManager
@@ -194,12 +197,35 @@ class MainActivity : AppCompatActivity() {
         autoStartView.setOnCheckedChangeListener { _, checked ->
             Settings.setAutoStart(this, checked)
             overlayPrompted = false
-            syncAutoStart()
+            syncWatcher()
         }
 
         startAppButton = findViewById(R.id.start_app)
         startAppButton.setOnClickListener { showStartAppPicker() }
         updateStartAppUi()
+
+        // Close-on-disconnect. The app is closed by CarConnectionWatcher when Android Auto drops;
+        // leaving a foreground app or force stopping it needs the accessibility service.
+        closeAppView = findViewById(R.id.close_app)
+        closeAppView.isChecked = Settings.closeAppOnDisconnect(this)
+        closeAppView.setOnCheckedChangeListener { _, checked ->
+            Settings.setCloseAppOnDisconnect(this, checked)
+            if (!checked) Settings.setCloseAppHard(this, false)
+            updateCloseAppUi()
+            syncWatcher()
+        }
+
+        closeAppButton = findViewById(R.id.close_app_picker)
+        closeAppButton.setOnClickListener { showCloseAppPicker() }
+
+        closeAppHardView = findViewById(R.id.close_app_hard)
+        closeAppHardView.isChecked = Settings.closeAppHard(this)
+        closeAppHardView.setOnCheckedChangeListener { _, checked ->
+            Settings.setCloseAppHard(this, checked)
+            // Force stop is driven by the accessibility service; open its settings when it is off.
+            if (checked && !TouchInjectorService.isConnected) openAccessibilitySettings()
+        }
+        updateCloseAppUi()
 
         updates = UpdateManager(this)
 
@@ -231,10 +257,10 @@ class MainActivity : AppCompatActivity() {
             RotationLock.lockLandscape(this)
         }
         updateTouchControlUi()
-        syncAutoStart()
+        syncWatcher()
         maybeAutoStart()
         // The quick launch panel needs the same background-launch permission to open apps, so ask
-        // for it even when auto-start is off (once per activity, like syncAutoStart does).
+        // for it even when auto-start is off (once per activity, like syncWatcher does).
         if (quickLaunchView.isChecked && !android.provider.Settings.canDrawOverlays(this) &&
             !overlayPrompted
         ) {
@@ -255,25 +281,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Runs the watcher only while the setting is on and the background-launch permission is held.
-     * That permission is what makes the whole feature work, so asking for it is the first step.
+     * Runs the watcher while either hands-free feature wants it: auto-start mirroring or closing
+     * an app on disconnect. Auto-start alone needs "Display over other apps" for its background
+     * activity start, so without it the watcher is only kept for close-on-disconnect.
      */
-    private fun syncAutoStart() {
-        if (!autoStartView.isChecked) {
-            CarConnectionWatcher.stop(this)
-            return
+    private fun syncWatcher() {
+        val autoStart = autoStartView.isChecked
+        val close = closeAppView.isChecked
+        if (autoStart && !android.provider.Settings.canDrawOverlays(this) && !overlayPrompted) {
+            overlayPrompted = true
+            requestOverlayPermissionIfNeeded()
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-            !android.provider.Settings.canDrawOverlays(this)
-        ) {
+        if (autoStart && android.provider.Settings.canDrawOverlays(this) || close) {
+            CarConnectionWatcher.start(this)
+        } else {
             CarConnectionWatcher.stop(this)
-            if (!overlayPrompted) {
-                overlayPrompted = true
-                requestOverlayPermissionIfNeeded()
-            }
-            return
         }
-        CarConnectionWatcher.start(this)
     }
 
     /**
@@ -332,9 +355,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showStartAppPicker() {
+    /**
+     * Shows the close-on-disconnect controls: the app picker and the force-stop option only make
+     * sense while the feature is on, and force stop only once an app is chosen.
+     */
+    private fun updateCloseAppUi() {
+        val enabled = closeAppView.isChecked
+        closeAppButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        closeAppHardView.visibility =
+            if (enabled && Settings.closeAppPackage(this).isNotBlank()) View.VISIBLE else View.GONE
+        val label = Settings.closeAppLabel(this)
+        if (label.isBlank()) {
+            closeAppButton.setText(R.string.close_app_pick)
+        } else {
+            closeAppButton.text = getString(R.string.close_app_selected, label)
+        }
+    }
+
+    private fun showStartAppPicker() =
+        showAppPicker(R.string.start_app, R.string.start_app_none) { packageName, label ->
+            Settings.setStartApp(this, packageName, label)
+            updateStartAppUi()
+        }
+
+    private fun showCloseAppPicker() =
+        showAppPicker(R.string.close_app_pick_title, R.string.close_app_none) { packageName, label ->
+            Settings.setCloseApp(this, packageName, label)
+            updateCloseAppUi()
+        }
+
+    /**
+     * Single-select app picker: the first row clears the choice, the rest launch [onPicked] with
+     * the chosen package and label.
+     */
+    private fun showAppPicker(titleRes: Int, noneRes: Int, onPicked: (String, String) -> Unit) {
         val apps = launchableApps()
-        val noneLabel = getString(R.string.start_app_none)
+        val noneLabel = getString(noneRes)
         val view = layoutInflater.inflate(R.layout.dialog_app_picker, null)
         val search = view.findViewById<EditText>(R.id.search)
         val list = view.findViewById<ListView>(R.id.list)
@@ -360,18 +416,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.start_app)
+            .setTitle(titleRes)
             .setView(view)
             .create()
 
         list.setOnItemClickListener { _, _, position, _ ->
             if (position == 0) {
-                Settings.setStartApp(this, "", "")
+                onPicked("", "")
             } else {
                 apps.filter { matches(it.second) }.getOrNull(position - 1)
-                    ?.let { Settings.setStartApp(this, it.first, it.second) }
+                    ?.let { onPicked(it.first, it.second) }
             }
-            updateStartAppUi()
             dialog.dismiss()
         }
 

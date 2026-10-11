@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.graphics.Path
+import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -11,22 +12,34 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.example.mycar.Settings
 
 /**
- * Accessibility service with two jobs:
+ * Accessibility service with three jobs:
  *
  * - Inject taps the user makes on the car mirror, so the car touchscreen can drive the phone
  *   (`canPerformGestures`).
  * - Press Share on the system screen-capture prompt for hands-free start
  *   (`canRetrieveWindowContent`).
+ * - Close the app chosen for "close when Android Auto disconnects": leave it (Home) or force stop
+ *   it by driving the app-info screen (`canRetrieveWindowContent`).
  *
  * A normal app cannot synthesize input for other apps; an accessibility service with gestures is
  * one of the two supported routes (root is the other). This service acts only when
- * [MirrorSurfaceCallback] forwards a tap, or on SystemUI's projection window — it never reads or
- * touches anything else. The user enables it manually in Settings -> Accessibility.
+ * [MirrorSurfaceCallback] forwards a tap, on SystemUI's projection window, or while a force-stop
+ * request started by [forceStop] is pending. It never reads or touches anything else. The user
+ * enables it manually in Settings -> Accessibility.
  */
 class TouchInjectorService : AccessibilityService() {
 
     /** Debounce so the capture prompt is accepted once, not on every window change. */
     private var lastAutoAcceptAt = 0L
+
+    /** Package a [forceStop] is currently driving the app-info screen for, or null. */
+    private var forceStopPackage: String? = null
+
+    /** Wall clock after which a pending [forceStop] gives up. */
+    private var forceStopDeadline = 0L
+
+    /** 0 = idle, 1 = looking for the Force stop button, 2 = confirming the dialog. */
+    private var forceStopPhase = 0
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -36,6 +49,7 @@ class TouchInjectorService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         autoAcceptCapturePrompt(event)
+        driveForceStop(event)
     }
 
     override fun onInterrupt() = Unit
@@ -66,14 +80,71 @@ class TouchInjectorService : AccessibilityService() {
         }
     }
 
+    /**
+     * Drives the app-info screen's "Force stop" for a pending [forceStop] request: first the
+     * button on the app-info page, then the confirmation dialog. Strictly scoped — it does
+     * nothing unless [forceStop] asked for it, only reads Settings' own window, and gives up after
+     * [FORCE_STOP_TIMEOUT_MS] so a screen we never reach (a locked phone, an OEM that renamed or
+     * moved the button) cannot leave the service acting on unrelated windows.
+     */
+    private fun driveForceStop(event: AccessibilityEvent?) {
+        val packageName = forceStopPackage ?: return
+        if (SystemClock.uptimeMillis() > forceStopDeadline) {
+            Log.w(TAG, "giving up force stopping $packageName")
+            resetForceStop()
+            return
+        }
+        if (event?.packageName?.toString() != SETTINGS_PACKAGE) return
+        val root = rootInActiveWindow ?: return
+        when (forceStopPhase) {
+            1 -> {
+                val button = findForceStopButton(root) ?: return
+                if (button.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    Log.i(TAG, "pressed Force stop for $packageName")
+                    forceStopPhase = 2
+                }
+            }
+            2 -> {
+                val confirm = root.findAccessibilityNodeInfosByViewId(CONFIRM_BUTTON_ID).firstOrNull()
+                    ?: return
+                if (confirm.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    Log.i(TAG, "force stopped $packageName")
+                    resetForceStop()
+                    // Leave the app-info screen once the app is gone.
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                }
+            }
+        }
+    }
+
+    /** The Force stop button on Settings' app-info page: by id on AOSP, by label elsewhere. */
+    private fun findForceStopButton(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        root.findAccessibilityNodeInfosByViewId("$SETTINGS_PACKAGE:id/force_stop_button")
+            .firstOrNull { it.isClickable }
+            ?.let { return it }
+        for (label in FORCE_STOP_LABELS) {
+            root.findAccessibilityNodeInfosByText(label)
+                .firstOrNull { it.isClickable }
+                ?.let { return it }
+        }
+        return null
+    }
+
+    private fun resetForceStop() {
+        forceStopPackage = null
+        forceStopPhase = 0
+    }
+
     override fun onUnbind(intent: android.content.Intent?): Boolean {
         if (instance === this) instance = null
+        resetForceStop()
         Log.i(TAG, "disconnected")
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
         if (instance === this) instance = null
+        resetForceStop()
         super.onDestroy()
     }
 
@@ -134,6 +205,14 @@ class TouchInjectorService : AccessibilityService() {
         private const val POSITIVE_BUTTON_ID = "android:id/button1"
         private const val AUTO_ACCEPT_COOLDOWN_MS = 2_000L
 
+        /** Settings' app-info screen and the "Force stop" labels this service looks for. */
+        private const val SETTINGS_PACKAGE = "com.android.settings"
+        private const val CONFIRM_BUTTON_ID = "android:id/button1"
+        private val FORCE_STOP_LABELS = listOf("Force stop", "Zaustavi")
+
+        /** How long a force-stop request waits for the app-info screen before giving up. */
+        private const val FORCE_STOP_TIMEOUT_MS = 8_000L
+
         @Volatile
         private var instance: TouchInjectorService? = null
 
@@ -160,5 +239,35 @@ class TouchInjectorService : AccessibilityService() {
             val service = instance ?: return false
             return runCatching { service.startActivity(intent) }.isSuccess
         }
+
+        /** The package of the window in front, or null when the service is off. */
+        fun foregroundPackage(): String? =
+            instance?.rootInActiveWindow?.packageName?.toString()
+
+        /** Sends the current foreground app to the background (goes home). False if the service
+         * is off. */
+        fun goHome(): Boolean = instance?.performGlobalAction(GLOBAL_ACTION_HOME) == true
+
+        /**
+         * Force stops [packageName] by opening its app-info screen and pressing "Force stop". The
+         * page is driven from [onAccessibilityEvent]. False when the service is off or the screen
+         * could not be opened; the caller should fall back to leaving the app.
+         */
+        fun forceStop(packageName: String): Boolean = instance?.startForceStop(packageName) == true
+    }
+
+    /** Opens the app-info screen and arms [driveForceStop] to press Force stop on it. */
+    private fun startForceStop(packageName: String): Boolean {
+        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(Uri.parse("package:$packageName"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val started = runCatching { startActivity(intent) }
+            .onFailure { Log.w(TAG, "Could not open app info for $packageName", it) }
+            .isSuccess
+        if (!started) return false
+        forceStopPackage = packageName
+        forceStopDeadline = SystemClock.uptimeMillis() + FORCE_STOP_TIMEOUT_MS
+        forceStopPhase = 1
+        return true
     }
 }

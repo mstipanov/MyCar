@@ -13,7 +13,11 @@ class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        if (Settings.autoStart(context) && android.provider.Settings.canDrawOverlays(context)) {
+        // Auto-start needs the overlay permission for its background activity start; closing an
+        // app on disconnect does not, so either feature keeps the watcher alive.
+        val forAutoStart =
+            Settings.autoStart(context) && android.provider.Settings.canDrawOverlays(context)
+        if (forAutoStart || Settings.closeAppOnDisconnect(context)) {
             CarConnectionWatcher.start(context)
         }
     }

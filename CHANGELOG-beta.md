@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.30-beta1
+- New "Close an app when Android Auto disconnects": pick an app and MyCar closes it when the car disconnects; tick "Force stop it" to stop its media and background work too (needs the accessibility service)
+
 ## 1.28-beta1
 - The Android Auto category is now selectable in the app: Navigation (default) or Weather. Switching takes effect when Android Auto reconnects
 

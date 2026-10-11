@@ -35,6 +35,11 @@
     <!-- "Keep screen on while mirroring" holds a SCREEN_BRIGHT_WAKE_LOCK. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- "Close an app when Android Auto disconnects": reaps the chosen app's background process.
+         This is a harmless no-op for another app from Android 14 on, where the accessibility
+         service's Force stop takes over; the permission still covers Android 13 and below. -->
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+
     <!-- "Lock landscape while mirroring" writes the system rotation settings. Granted through
          the "Modify system settings" special access, not at install time. -->
     <uses-permission

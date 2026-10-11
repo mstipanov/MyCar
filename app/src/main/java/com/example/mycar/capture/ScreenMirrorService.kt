@@ -31,6 +31,7 @@ import com.example.mycar.MainActivity
 import com.example.mycar.R
 import com.example.mycar.RotationLock
 import com.example.mycar.Settings
+import com.example.mycar.audio.AnnouncementPauser
 import com.example.mycar.auto.CarConnectionWatcher
 
 /**
@@ -171,6 +172,7 @@ class ScreenMirrorService : Service() {
         applyKeepScreenOn()
         applyRotationLock()
         openStartApps()
+        AnnouncementPauser.start(this)
     }
 
     /**
@@ -388,6 +390,7 @@ class ScreenMirrorService : Service() {
         isRunning = false
         applyKeepScreenOn()
         applyRotationLock()
+        AnnouncementPauser.stop()
     }
 
     /**

@@ -228,6 +228,30 @@
                     android:text="@string/car_category_hint" />
             </LinearLayout>
 
+            <!-- Audio: pause media while an announcement plays -->
+            <LinearLayout style="@style/MyCar.Card">
+
+                <TextView
+                    style="@style/MyCar.SectionCaption"
+                    android:text="@string/section_audio" />
+
+                <CheckBox
+                    android:id="@+id/pause_announcements"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pause_announcements" />
+
+                <TextView
+                    style="@style/MyCar.Hint"
+                    android:text="@string/pause_announcements_hint" />
+
+                <Button
+                    android:id="@+id/notification_access"
+                    style="@style/MyCar.Button.Secondary"
+                    android:visibility="gone"
+                    android:text="@string/grant_notification_access" />
+            </LinearLayout>
+
             <!-- Appearance -->
             <LinearLayout style="@style/MyCar.Card">
 

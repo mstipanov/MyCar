@@ -26,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.widget.doAfterTextChanged
 import com.example.mycar.auto.CarConnectionWatcher
 import com.example.mycar.capture.ScreenMirrorService
@@ -59,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var closeAppView: CheckBox
     private lateinit var closeAppButton: Button
     private lateinit var closeAppHardView: CheckBox
+    private lateinit var pauseAnnouncementsView: CheckBox
+    private lateinit var notificationAccessButton: Button
     private lateinit var accessibilityButton: Button
 
     private lateinit var updates: UpdateManager
@@ -248,6 +251,20 @@ class MainActivity : AppCompatActivity() {
         }
         updateCloseAppUi()
 
+        // Pause media while a navigation/alert app speaks. Controlling another app's media needs
+        // Notification access, so ask for it when the feature is switched on.
+        pauseAnnouncementsView = findViewById(R.id.pause_announcements)
+        pauseAnnouncementsView.isChecked = Settings.pauseForAnnouncements(this)
+        pauseAnnouncementsView.setOnCheckedChangeListener { _, checked ->
+            Settings.setPauseForAnnouncements(this, checked)
+            if (checked && !notificationAccessGranted()) openNotificationAccessSettings()
+            updateNotificationAccessUi()
+        }
+
+        notificationAccessButton = findViewById(R.id.notification_access)
+        notificationAccessButton.setOnClickListener { openNotificationAccessSettings() }
+        updateNotificationAccessUi()
+
         updates = UpdateManager(this)
 
         startButton.setOnClickListener { requestProjection() }
@@ -278,6 +295,7 @@ class MainActivity : AppCompatActivity() {
             RotationLock.lockLandscape(this)
         }
         updateTouchControlUi()
+        updateNotificationAccessUi()
         syncWatcher()
         maybeAutoStart()
         // The quick launch panel needs the same background-launch permission to open apps, so ask
@@ -364,6 +382,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun openAccessibilitySettings() {
         startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    }
+
+    /** Whether MyCar is currently an enabled notification listener. */
+    private fun notificationAccessGranted(): Boolean =
+        NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
+
+    private fun openNotificationAccessSettings() {
+        startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+
+    /** Offers the "Grant notification access" button until the access is actually granted. */
+    private fun updateNotificationAccessUi() {
+        notificationAccessButton.visibility =
+            if (notificationAccessGranted()) View.GONE else View.VISIBLE
     }
 
     /** Shows how many apps will open once mirroring starts, or the prompt when none is set. */

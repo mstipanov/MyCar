@@ -165,6 +165,20 @@
                     android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Lets MyCar pause the phone's current media while an announcement plays; a
+             MediaController is the only way a normal app can control another app's playback. The
+             user enables it by hand in Settings -> Notification access, and nothing else is done
+             with notifications. -->
+        <service
+                android:name=".audio.MediaControlService"
+                android:exported="true"
+                android:label="@string/app_name"
+                android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <!-- Exposes the downloaded APK in cache/updates to the system package installer. -->
         <provider
                 android:name="androidx.core.content.FileProvider"

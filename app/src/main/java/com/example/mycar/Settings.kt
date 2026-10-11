@@ -25,6 +25,7 @@ object Settings {
     const val KEY_CLOSE_APP_ON_DISCONNECT = "closeAppOnDisconnect"
     const val KEY_CLOSE_APP_HARD = "closeAppHard"
     const val KEY_THEME_MODE = "themeMode"
+    const val KEY_PAUSE_FOR_ANNOUNCEMENTS = "pauseForAnnouncements"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
@@ -201,6 +202,18 @@ object Settings {
 
     fun setCloseAppHard(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_CLOSE_APP_HARD, enabled).apply()
+    }
+
+    /**
+     * Whether to pause whatever is playing (YouTube, music) while a navigation or alert app
+     * (Radarbot, Maps, Waze) speaks, resuming it afterwards. Needs Notification access for the
+     * MediaController, and only acts while mirroring. Off by default.
+     */
+    fun pauseForAnnouncements(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_PAUSE_FOR_ANNOUNCEMENTS, false)
+
+    fun setPauseForAnnouncements(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PAUSE_FOR_ANNOUNCEMENTS, enabled).apply()
     }
 
     /** Package of the app to close when Android Auto disconnects, or blank for none. */

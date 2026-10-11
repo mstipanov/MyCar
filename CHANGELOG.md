@@ -1,5 +1,10 @@
 # MyCar
 
+## 1.31
+- "Open an app when mirroring starts" is now a list: pick several apps and MyCar opens them one after another, so the last one is on screen and the others run behind it
+- The settings screen has a cleaner look: a header with the live status, and the controls grouped into labelled cards (Mirroring, Hands-free, Car screen, Appearance, Updates)
+- Dark mode: the app now has a light and a dark look, with an Appearance setting to pick Light, Dark, or Match system
+
 ## 1.30
 - New "Close an app when Android Auto disconnects": pick an app and MyCar closes it when the car disconnects; tick "Force stop it" to stop its media and background work too (needs the accessibility service)
 

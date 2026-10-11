@@ -228,6 +228,38 @@
                     android:text="@string/car_category_hint" />
             </LinearLayout>
 
+            <!-- Appearance -->
+            <LinearLayout style="@style/MyCar.Card">
+
+                <TextView
+                    style="@style/MyCar.SectionCaption"
+                    android:text="@string/section_appearance" />
+
+                <RadioGroup
+                    android:id="@+id/theme_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <RadioButton
+                        android:id="@+id/theme_system"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/theme_system" />
+
+                    <RadioButton
+                        android:id="@+id/theme_light"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/theme_light" />
+
+                    <RadioButton
+                        android:id="@+id/theme_dark"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/theme_dark" />
+                </RadioGroup>
+            </LinearLayout>
+
             <!-- Updates -->
             <LinearLayout style="@style/MyCar.Card">
 

@@ -8,7 +8,12 @@
     <string name="section_mirroring">Mirroring</string>
     <string name="section_hands_free">Hands-free</string>
     <string name="section_car_screen">Car screen</string>
+    <string name="section_appearance">Appearance</string>
     <string name="section_updates">Updates</string>
+
+    <string name="theme_system">Match system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 
     <string name="start_mirroring">Start mirroring</string>
     <string name="stop_mirroring">Stop mirroring</string>

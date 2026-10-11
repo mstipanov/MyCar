@@ -179,6 +179,8 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   free, so Maps/Waze keep routing while the mirror is on screen) or *Navigation* (the app sits in
   the navigation launcher and can be auto-opened, sharing that slot with Maps/Waze). A change takes
   effect when Android Auto reconnects.
+* **Appearance** — *Light*, *Dark*, or *Match system* (the default). The whole phone screen
+  follows the choice, including its cards and dialogs.
 
 ### Hands-free start
 

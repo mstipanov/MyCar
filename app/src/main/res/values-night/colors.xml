@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark-mode overrides for the palette in values/colors.xml. Same names, so every layout and
+     drawable that references them follows the theme with no changes. -->
+<resources>
+    <!-- Brand -->
+    <color name="mycar_header">#0A1623</color>
+    <color name="mycar_header_dark">#10273D</color>
+    <color name="mycar_accent">#6BA5FF</color>
+
+    <!-- Surfaces -->
+    <color name="mycar_background">#10151C</color>
+    <color name="mycar_surface">#1A212B</color>
+    <color name="mycar_stroke">#2A3441</color>
+
+    <!-- Text -->
+    <color name="mycar_text">#E7ECF2</color>
+    <color name="mycar_text_muted">#9AA6B4</color>
+    <color name="mycar_on_header">#FFFFFF</color>
+    <color name="mycar_on_header_muted">#A9B7C6</color>
+    <color name="mycar_on_accent">#0B1017</color>
+</resources>

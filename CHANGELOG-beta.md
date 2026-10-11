@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.31-beta3
+- Dark mode: the phone screen now has a light and a dark look, with an Appearance setting to pick Light, Dark, or Match system
+
 ## 1.31-beta2
 - The settings screen has a cleaner look: a header with the live status, and the controls grouped into labelled cards (Mirroring, Hands-free, Car screen, Updates)
 

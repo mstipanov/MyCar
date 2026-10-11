@@ -1,6 +1,7 @@
 package com.example.mycar
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import com.example.mycar.car.CarCategory
 import org.json.JSONArray
 
@@ -23,9 +24,23 @@ object Settings {
     const val KEY_CLOSE_APP_LABEL = "closeAppLabel"
     const val KEY_CLOSE_APP_ON_DISCONNECT = "closeAppOnDisconnect"
     const val KEY_CLOSE_APP_HARD = "closeAppHard"
+    const val KEY_THEME_MODE = "themeMode"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
+
+    /**
+     * Which theme to use: follow the system, or force light/dark. Default is the system setting.
+     * Applied by `MyCarApp` at startup and again when the choice changes.
+     */
+    fun themeMode(context: Context): ThemeMode {
+        val stored = prefs(context).getString(KEY_THEME_MODE, null)
+        return ThemeMode.entries.firstOrNull { it.name == stored } ?: ThemeMode.SYSTEM
+    }
+
+    fun setThemeMode(context: Context, mode: ThemeMode) {
+        prefs(context).edit().putString(KEY_THEME_MODE, mode.name).apply()
+    }
 
     /**
      * Whether the phone screen should stay awake.
@@ -205,6 +220,16 @@ object Settings {
     /** The prefs instance, so the mirror service can listen for changes live. */
     fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+}
+
+/**
+ * The app's theme choice: follow the system light/dark setting, or pin one. [delegateMode] is the
+ * matching [AppCompatDelegate] constant.
+ */
+enum class ThemeMode(val delegateMode: Int) {
+    SYSTEM(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM),
+    LIGHT(AppCompatDelegate.MODE_NIGHT_NO),
+    DARK(AppCompatDelegate.MODE_NIGHT_YES),
 }
 
 /**

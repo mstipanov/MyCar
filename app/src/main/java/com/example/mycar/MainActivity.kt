@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.widget.doAfterTextChanged
 import com.example.mycar.auto.CarConnectionWatcher
 import com.example.mycar.capture.ScreenMirrorService
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var quickLaunchView: CheckBox
     private lateinit var manageLauncherAppsButton: Button
     private lateinit var categoryGroup: RadioGroup
+    private lateinit var themeGroup: RadioGroup
     private lateinit var autoStartView: CheckBox
     private lateinit var startAppButton: Button
     private lateinit var closeAppView: CheckBox
@@ -189,6 +191,25 @@ class MainActivity : AppCompatActivity() {
             }
             Settings.setCarCategory(this, category)
             CarCategory.register(this, category)
+        }
+
+        // Appearance: light, dark, or follow the system. Changing it recreates this activity.
+        themeGroup = findViewById(R.id.theme_group)
+        themeGroup.check(
+            when (Settings.themeMode(this)) {
+                ThemeMode.SYSTEM -> R.id.theme_system
+                ThemeMode.LIGHT -> R.id.theme_light
+                ThemeMode.DARK -> R.id.theme_dark
+            }
+        )
+        themeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val mode = when (checkedId) {
+                R.id.theme_light -> ThemeMode.LIGHT
+                R.id.theme_dark -> ThemeMode.DARK
+                else -> ThemeMode.SYSTEM
+            }
+            Settings.setThemeMode(this, mode)
+            AppCompatDelegate.setDefaultNightMode(mode.delegateMode)
         }
 
         autoStartView = findViewById(R.id.auto_start)

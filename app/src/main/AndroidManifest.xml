@@ -66,6 +66,7 @@
         This is a phone app that is projected into the car.
     -->
     <application
+            android:name=".MyCarApp"
             android:allowBackup="true"
             android:label="@string/app_name"
             android:icon="@mipmap/ic_launcher"

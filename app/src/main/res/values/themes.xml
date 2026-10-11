@@ -4,15 +4,20 @@
         "You need to use a Theme.AppCompat theme (or descendant) with this activity" on boot
         when the theme is a plain framework theme such as android:Theme.Material.*.
 
+        DayNight so the palette can flip with the theme (values-night/colors.xml). The default
+        night mode is FOLLOW_SYSTEM; MainActivity's theme setting overrides it at runtime.
+
         No action bar: the screen draws its own header (app name + status), so the bar would
-        only duplicate the title.
+        only duplicate the title. The header is dark in both themes, so the status-bar icons are
+        always light.
     -->
-    <style name="Theme.MyCar" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="Theme.MyCar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/mycar_header</item>
         <item name="colorPrimaryDark">@color/mycar_header_dark</item>
         <item name="colorAccent">@color/mycar_accent</item>
         <item name="android:windowBackground">@color/mycar_background</item>
         <item name="android:textColorPrimary">@color/mycar_text</item>
         <item name="android:textColorSecondary">@color/mycar_text_muted</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

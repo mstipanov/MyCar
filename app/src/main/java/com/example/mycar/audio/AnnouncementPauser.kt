@@ -15,13 +15,16 @@ import com.example.mycar.auto.CarConnectionWatcher
  *
  * Started while a capture is live (the "only while mirroring" rule) and whenever the setting is
  * switched on during a session; [stop] runs when mirroring ends. A normal app receives
- * *anonymized* playback configurations, so the trigger is the *usage* of the active stream —
- * navigation guidance / accessibility / notification / notification event — not a specific
- * package; that also covers Maps and Waze.
+ * *anonymized* playback configurations, so the trigger is how the stream is tagged, not which
+ * package it is:
  *
- * [status] reports the last audio usages seen and what the last announcement did, so the settings
- * screen can show why it did or did not act — a mismatch (an unexpected usage, missing
- * Notification access, not projecting) is diagnosable on the phone without logcat.
+ * - an announcement **usage** (navigation guidance / accessibility / notification), or
+ * - a **speech** content type — this is Radarbot's "News & Talk / Speech" stream, and covers apps
+ *   that play announcements as ordinary media.
+ *
+ * What gets paused is a media stream that is *not* speech, so the announcement itself is left
+ * alone. [status] reports what was seen and done, so the settings screen can show why it acted or
+ * did not, without logcat.
  */
 object AnnouncementPauser {
 
@@ -48,9 +51,9 @@ object AnnouncementPauser {
     private var announcementActive = false
     private var pausedByUs = false
 
-    /** The active audio usages at the last change, for the settings-screen diagnostic. */
+    /** A short summary of the usages/content types seen at the last change, for the diagnostic. */
     @Volatile
-    private var lastUsages: Set<Int> = emptySet()
+    private var lastSeen: String = "nothing seen yet"
 
     /** What the last announcement did, or null if none has been seen. */
     @Volatile
@@ -60,9 +63,7 @@ object AnnouncementPauser {
     val status: String?
         get() {
             if (audioManager == null) return null
-            val usages = if (lastUsages.isEmpty()) "none" else lastUsages.sorted().joinToString(",")
-            val action = lastAction ?: "no announcement seen yet"
-            return "Audio usages: $usages — $action"
+            return "Audio $lastSeen — ${lastAction ?: "no announcement seen yet"}"
         }
 
     private val resume = Runnable {
@@ -103,25 +104,31 @@ object AnnouncementPauser {
         if (pausedByUs) MediaControlService.resumePausedMedia()
         pausedByUs = false
         announcementActive = false
-        lastUsages = emptySet()
+        lastSeen = "nothing seen yet"
         lastAction = null
     }
 
     private fun onConfigs(configs: List<AudioPlaybackConfiguration>) {
         // getActivePlaybackConfigurations() only lists *active* players, so presence is the signal.
-        val activeUsages = configs.map { it.audioAttributes.usage }.toSet()
-        lastUsages = activeUsages
-        Log.d(TAG, "active usages: $activeUsages")
+        val attrs = configs.map { it.audioAttributes }
+        val usages = attrs.map { it.usage }.toSet()
+        val speech = attrs.any { it.contentType == AudioAttributes.CONTENT_TYPE_SPEECH }
+        lastSeen = "usages=${usages.sorted().joinToString(",")} speech=$speech"
+        Log.d(TAG, "active: $lastSeen")
 
-        val announcementUsage = activeUsages.firstOrNull { it in ANNOUNCEMENT_USAGES }
-        val mediaPlaying = AudioAttributes.USAGE_MEDIA in activeUsages
+        val announcing = speech || usages.any { it in ANNOUNCEMENT_USAGES }
+        // Media we may pause: an ordinary media stream that is not the speech announcement itself.
+        val mediaPlaying = attrs.any {
+            it.usage == AudioAttributes.USAGE_MEDIA &&
+                it.contentType != AudioAttributes.CONTENT_TYPE_SPEECH
+        }
 
-        if (announcementUsage != null) {
+        if (announcing) {
             handler.removeCallbacks(resume)
             if (!announcementActive) {
                 announcementActive = true
-                Log.i(TAG, "announcement started (usage=$announcementUsage)")
-                act(announcementUsage, mediaPlaying)
+                Log.i(TAG, "announcement started ($lastSeen)")
+                act(speech, mediaPlaying)
             }
         } else if (announcementActive) {
             announcementActive = false
@@ -130,18 +137,18 @@ object AnnouncementPauser {
         }
     }
 
-    private fun act(usage: Int, mediaPlaying: Boolean) {
+    private fun act(speech: Boolean, mediaPlaying: Boolean) {
+        val trigger = if (speech) "speech" else "announcement usage"
         val action = when {
-            !shouldAct() -> "announcement (usage $usage): not mirroring"
-            !mediaPlaying -> "announcement (usage $usage): no media was playing"
-            !MediaControlService.isConnected ->
-                "announcement (usage $usage): grant notification access"
+            !shouldAct() -> "$trigger: not mirroring"
+            !mediaPlaying -> "$trigger: no media was playing"
+            !MediaControlService.isConnected -> "$trigger: grant notification access"
             else -> {
                 pausedByUs = MediaControlService.pausePlayingMedia()
                 if (pausedByUs) {
-                    "announcement (usage $usage): media paused"
+                    "$trigger: media paused"
                 } else {
-                    "announcement (usage $usage): found no playing media session"
+                    "$trigger: found no playing media session"
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.example.mycar.audio
 
 import android.content.ComponentName
+import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -40,14 +41,17 @@ class MediaControlService : NotificationListenerService() {
         super.onDestroy()
     }
 
-    /** The session that is playing media right now, ignoring MyCar and any announcement stream. */
+    /** The session that is playing media right now, ignoring MyCar and any speech announcement. */
     private fun playingController(): MediaController? = runCatching {
         val manager = getSystemService(MediaSessionManager::class.java)
         manager.getActiveSessions(ComponentName(this, MediaControlService::class.java))
     }.getOrDefault(emptyList())
         .firstOrNull { controller ->
             controller.packageName != packageName &&
-                controller.playbackState?.state == PlaybackState.STATE_PLAYING
+                controller.playbackState?.state == PlaybackState.STATE_PLAYING &&
+                // Never pause the announcement itself (Radarbot plays as a speech stream).
+                controller.playbackInfo?.audioAttributes?.contentType !=
+                    AudioAttributes.CONTENT_TYPE_SPEECH
         }
 
     /** Pauses the playing media. True when there was something to pause. */

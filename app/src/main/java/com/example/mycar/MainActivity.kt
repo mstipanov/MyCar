@@ -29,6 +29,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.widget.doAfterTextChanged
 import com.example.mycar.auto.CarConnectionWatcher
+import com.example.mycar.audio.AnnouncementPauser
 import com.example.mycar.capture.ScreenMirrorService
 import com.example.mycar.car.CarCategory
 import com.example.mycar.touch.TouchInjectorService
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var closeAppHardView: CheckBox
     private lateinit var pauseAnnouncementsView: CheckBox
     private lateinit var notificationAccessButton: Button
+    private lateinit var announcementStatusView: TextView
     private lateinit var accessibilityButton: Button
 
     private lateinit var updates: UpdateManager
@@ -257,13 +259,22 @@ class MainActivity : AppCompatActivity() {
         pauseAnnouncementsView.isChecked = Settings.pauseForAnnouncements(this)
         pauseAnnouncementsView.setOnCheckedChangeListener { _, checked ->
             Settings.setPauseForAnnouncements(this, checked)
-            if (checked && !notificationAccessGranted()) openNotificationAccessSettings()
+            if (checked) {
+                if (ScreenMirrorService.isRunning) AnnouncementPauser.start(this)
+                if (!notificationAccessGranted()) openNotificationAccessSettings()
+            } else {
+                AnnouncementPauser.stop()
+            }
             updateNotificationAccessUi()
+            updateAnnouncementStatusUi()
         }
 
         notificationAccessButton = findViewById(R.id.notification_access)
         notificationAccessButton.setOnClickListener { openNotificationAccessSettings() }
+
+        announcementStatusView = findViewById(R.id.announcement_status)
         updateNotificationAccessUi()
+        updateAnnouncementStatusUi()
 
         updates = UpdateManager(this)
 
@@ -296,6 +307,10 @@ class MainActivity : AppCompatActivity() {
         }
         updateTouchControlUi()
         updateNotificationAccessUi()
+        if (pauseAnnouncementsView.isChecked && ScreenMirrorService.isRunning) {
+            AnnouncementPauser.start(this)
+        }
+        updateAnnouncementStatusUi()
         syncWatcher()
         maybeAutoStart()
         // The quick launch panel needs the same background-launch permission to open apps, so ask
@@ -396,6 +411,14 @@ class MainActivity : AppCompatActivity() {
     private fun updateNotificationAccessUi() {
         notificationAccessButton.visibility =
             if (notificationAccessGranted()) View.GONE else View.VISIBLE
+    }
+
+    /** Shows what the last announcement did, so a mismatch is visible without logcat. */
+    private fun updateAnnouncementStatusUi() {
+        val enabled = pauseAnnouncementsView.isChecked
+        announcementStatusView.visibility = if (enabled) View.VISIBLE else View.GONE
+        announcementStatusView.text = AnnouncementPauser.status
+            ?: getString(R.string.announcement_status_none)
     }
 
     /** Shows how many apps will open once mirroring starts, or the prompt when none is set. */

@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta3
+- "Pause media during announcements" now also starts when you switch it on mid-session, and shows a diagnostic line with what the last announcement did (which audio usage it saw, and whether it paused)
+
 ## 1.33-beta2
 - Fixed the up/down/remove buttons in the app-list editor being invisible in dark mode
 

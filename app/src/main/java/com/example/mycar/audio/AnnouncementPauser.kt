@@ -13,12 +13,15 @@ import com.example.mycar.auto.CarConnectionWatcher
 /**
  * Pauses whatever is playing while a navigation or alert app speaks, then resumes it.
  *
- * Started by [com.example.mycar.capture.ScreenMirrorService] while a capture is live (the "only
- * while mirroring" rule), and only when the user asked for it and Notification access is granted.
- * A normal app receives *anonymized* playback configurations, so the trigger is the *usage* of the
- * active stream — navigation guidance / accessibility / notification — not a specific package;
- * that also covers Maps and Waze. If Radarbot turns out to use none of these, the log line below
- * says which usage it does use, and the set is easy to extend.
+ * Started while a capture is live (the "only while mirroring" rule) and whenever the setting is
+ * switched on during a session; [stop] runs when mirroring ends. A normal app receives
+ * *anonymized* playback configurations, so the trigger is the *usage* of the active stream —
+ * navigation guidance / accessibility / notification / notification event — not a specific
+ * package; that also covers Maps and Waze.
+ *
+ * [status] records what happened at the last announcement so the settings screen can show it; that
+ * is how a mismatch (an unexpected usage, missing Notification access) is diagnosed on a phone
+ * without logcat.
  */
 object AnnouncementPauser {
 
@@ -45,6 +48,11 @@ object AnnouncementPauser {
     private var announcementActive = false
     private var pausedByUs = false
 
+    /** What happened at the last announcement (or the watching state), for the settings screen. */
+    @Volatile
+    var status: String? = null
+        private set
+
     private val resume = Runnable {
         if (!announcementActive && pausedByUs) {
             MediaControlService.resumePausedMedia()
@@ -58,19 +66,24 @@ object AnnouncementPauser {
         }
     }
 
-    /** Starts watching while a capture is live. Idempotent; no-op unless the setting is on. */
+    /**
+     * Registers the playback watcher. Idempotent, and safe to call again later (e.g. after
+     * Notification access is granted); it does not require the media-control listener to be bound
+     * yet — that is only needed when an announcement actually starts.
+     */
     fun start(context: Context) {
-        if (audioManager != null) return
-        if (!Settings.pauseForAnnouncements(context)) return
-        if (!MediaControlService.isConnected) {
-            Log.w(TAG, "Notification access is not granted; not watching for announcements")
+        val ctx = context.applicationContext
+        appContext = ctx
+        if (!Settings.pauseForAnnouncements(ctx)) {
+            status = null
             return
         }
-        appContext = context.applicationContext
-        audioManager = context.getSystemService(AudioManager::class.java)?.also {
+        if (audioManager != null) return
+        audioManager = ctx.getSystemService(AudioManager::class.java)?.also {
             it.registerAudioPlaybackCallback(callback, handler)
             Log.i(TAG, "watching for announcements")
         }
+        if (status == null) status = "Watching for announcements…"
     }
 
     /** Stops watching and lets any media we paused play again. Idempotent. */
@@ -79,34 +92,49 @@ object AnnouncementPauser {
         audioManager?.let { runCatching { it.unregisterAudioPlaybackCallback(callback) } }
         audioManager = null
         appContext = null
-        if (pausedByUs) {
-            MediaControlService.resumePausedMedia()
-        }
+        if (pausedByUs) MediaControlService.resumePausedMedia()
         pausedByUs = false
         announcementActive = false
+        status = null
     }
 
     private fun onConfigs(configs: List<AudioPlaybackConfiguration>) {
         // getActivePlaybackConfigurations() only lists *active* players, so presence is the signal.
         val activeUsages = configs.map { it.audioAttributes.usage }.toSet()
+        Log.d(TAG, "active usages: $activeUsages")
 
-        val announcing = activeUsages.any { it in ANNOUNCEMENT_USAGES }
+        val announcementUsage = activeUsages.firstOrNull { it in ANNOUNCEMENT_USAGES }
         val mediaPlaying = AudioAttributes.USAGE_MEDIA in activeUsages
 
-        if (announcing) {
+        if (announcementUsage != null) {
             handler.removeCallbacks(resume)
             if (!announcementActive) {
                 announcementActive = true
-                Log.i(TAG, "announcement started (active usages: $activeUsages)")
-                if (mediaPlaying && shouldAct()) {
-                    pausedByUs = MediaControlService.pausePlayingMedia()
-                }
+                Log.i(TAG, "announcement started (usage=$announcementUsage)")
+                act(announcementUsage, mediaPlaying)
             }
         } else if (announcementActive) {
             announcementActive = false
-            Log.i(TAG, "announcement ended (active usages: $activeUsages)")
+            Log.i(TAG, "announcement ended")
             if (pausedByUs) handler.postDelayed(resume, RESUME_DELAY_MS)
         }
+    }
+
+    private fun act(usage: Int, mediaPlaying: Boolean) {
+        status = when {
+            !shouldAct() -> "Announcement (usage $usage): not mirroring"
+            !mediaPlaying -> "Announcement (usage $usage): no media was playing"
+            !MediaControlService.isConnected -> "Announcement (usage $usage): grant notification access"
+            else -> {
+                pausedByUs = MediaControlService.pausePlayingMedia()
+                if (pausedByUs) {
+                    "Announcement (usage $usage): media paused"
+                } else {
+                    "Announcement (usage $usage): found no playing media session"
+                }
+            }
+        }
+        Log.i(TAG, "status: $status")
     }
 
     /** Only act while the car is actually showing us. */

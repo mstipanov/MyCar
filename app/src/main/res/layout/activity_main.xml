@@ -245,6 +245,11 @@
                     style="@style/MyCar.Hint"
                     android:text="@string/pause_announcements_hint" />
 
+                <TextView
+                    android:id="@+id/announcement_status"
+                    style="@style/MyCar.Hint"
+                    android:visibility="gone" />
+
                 <Button
                     android:id="@+id/notification_access"
                     style="@style/MyCar.Button.Secondary"

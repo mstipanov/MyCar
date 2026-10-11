@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta2
+- Fixed the up/down/remove buttons in the app-list editor being invisible in dark mode
+
 ## 1.33-beta1
 - New "Pause media during announcements": YouTube or music pauses while a navigation or alert app (Radarbot, Maps, Waze) speaks, then resumes. Needs notification access; active while mirroring
 

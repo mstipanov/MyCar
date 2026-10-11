@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Secondary (tonal) button background: a soft accent fill that dims when disabled, so an
+     enabled action is clearly not the same as a greyed-out one. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/mycar_secondary_disabled" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/mycar_secondary_pressed" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/mycar_secondary" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+</selector>

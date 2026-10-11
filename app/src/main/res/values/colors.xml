@@ -7,6 +7,11 @@
     <color name="mycar_header_dark">#123A63</color>
     <color name="mycar_accent">#2F7DF6</color>
 
+    <!-- Secondary (tonal) buttons -->
+    <color name="mycar_secondary">#E7F0FE</color>
+    <color name="mycar_secondary_pressed">#D3E4FD</color>
+    <color name="mycar_secondary_disabled">#EDEFF3</color>
+
     <!-- Surfaces -->
     <color name="mycar_background">#F4F6F9</color>
     <color name="mycar_surface">#FFFFFF</color>

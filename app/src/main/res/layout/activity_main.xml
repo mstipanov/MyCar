@@ -69,7 +69,7 @@
 
                 <Button
                     android:id="@+id/stop"
-                    style="@style/MyCar.Button"
+                    style="@style/MyCar.Button.Secondary"
                     android:enabled="false"
                     android:text="@string/stop_mirroring" />
 
@@ -141,7 +141,7 @@
 
                 <Button
                     android:id="@+id/start_app"
-                    style="@style/MyCar.Button"
+                    style="@style/MyCar.Button.Secondary"
                     android:text="@string/start_app" />
 
                 <CheckBox
@@ -157,7 +157,7 @@
 
                 <Button
                     android:id="@+id/close_app_picker"
-                    style="@style/MyCar.Button"
+                    style="@style/MyCar.Button.Secondary"
                     android:text="@string/close_app_pick" />
 
                 <CheckBox
@@ -182,7 +182,7 @@
 
                 <Button
                     android:id="@+id/accessibility_settings"
-                    style="@style/MyCar.Button"
+                    style="@style/MyCar.Button.Secondary"
                     android:text="@string/open_accessibility_settings" />
 
                 <CheckBox
@@ -198,7 +198,7 @@
 
                 <Button
                     android:id="@+id/manage_launcher_apps"
-                    style="@style/MyCar.Button"
+                    style="@style/MyCar.Button.Secondary"
                     android:text="@string/manage_launcher_apps" />
 
                 <TextView
@@ -269,7 +269,7 @@
 
                 <Button
                     android:id="@+id/check_updates"
-                    style="@style/MyCar.Button"
+                    style="@style/MyCar.Button.Secondary"
                     android:text="@string/check_updates" />
 
                 <TextView

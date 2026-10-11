@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.32-beta2
+- Fixed the car launcher's rotate button needing two taps the first time: it now flips based on the phone's actual orientation instead of a stale stored value
+
 ## 1.32-beta1
 - Settings polish: buttons are no longer all-caps, secondary actions use a tinted style so they no longer look disabled, and the close-app hint is shorter
 

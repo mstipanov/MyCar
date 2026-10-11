@@ -2,9 +2,11 @@ package com.example.mycar
 
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.provider.Settings as AndroidSettings
 import android.util.Log
+import android.view.Display
 import android.view.Surface
 
 /**
@@ -92,11 +94,10 @@ object RotationLock {
                 .apply()
         }
 
-        val current = try {
-            AndroidSettings.System.getInt(resolver, USER_ROTATION, Surface.ROTATION_0)
-        } catch (t: Throwable) {
-            Surface.ROTATION_0
-        }
+        // Base the toggle on the display's *actual* rotation, not `user_rotation`: with auto-rotate
+        // on (the default, since "lock landscape" is off) `user_rotation` goes stale, so the first
+        // tap would pick the orientation the phone already has and look like it did nothing.
+        val current = displayRotation(context)
         val landscape = current == Surface.ROTATION_90 || current == Surface.ROTATION_270
         val next = if (landscape) Surface.ROTATION_0 else Surface.ROTATION_90
 
@@ -112,6 +113,26 @@ object RotationLock {
             Log.w(TAG, "Could not rotate the display", t)
             false
         }
+    }
+
+    /**
+     * The display's current rotation. Read live from the display because `user_rotation` is only
+     * meaningful while auto-rotate is off; falls back to that setting if the display is unavailable.
+     */
+    private fun displayRotation(context: Context): Int {
+        val actual = runCatching {
+            context.getSystemService(DisplayManager::class.java)
+                ?.getDisplay(Display.DEFAULT_DISPLAY)
+                ?.rotation
+        }.getOrNull()
+        if (actual != null) return actual
+        return runCatching {
+            AndroidSettings.System.getInt(
+                context.contentResolver,
+                USER_ROTATION,
+                Surface.ROTATION_0,
+            )
+        }.getOrDefault(Surface.ROTATION_0)
     }
 
     /** Restores the auto-rotate setting saved by [lockLandscape]. No-op if we never locked. */

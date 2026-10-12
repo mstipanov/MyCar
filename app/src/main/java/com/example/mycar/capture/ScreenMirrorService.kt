@@ -390,7 +390,6 @@ class ScreenMirrorService : Service() {
         isRunning = false
         applyKeepScreenOn()
         applyRotationLock()
-        AnnouncementPauser.stop()
     }
 
     /**

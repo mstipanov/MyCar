@@ -50,6 +50,10 @@ object AnnouncementPauser {
     private var appContext: Context? = null
     private var audioManager: AudioManager? = null
 
+    /** Whether the playback watcher is currently registered. */
+    @Volatile
+    private var watching = false
+
     // Announcement signals.
     private var audioAnnouncing = false
     private var sessionAnnouncing = false
@@ -65,12 +69,13 @@ object AnnouncementPauser {
     @Volatile
     private var lastAction: String? = null
 
-    /** One-line diagnostic for the settings screen; null when not watching. */
+    /** One-line diagnostic for the settings screen; null only when idle with nothing seen yet. */
     val status: String?
         get() {
-            if (audioManager == null) return null
+            if (!watching && lastAction == null && lastSeen == "nothing seen yet") return null
+            val state = if (watching) "Watching" else "Idle"
             val sessions = MediaControlService.activeSessionSummary() ?: "no access"
-            return "Audio $lastSeen · Sessions $sessions — ${lastAction ?: "no announcement yet"}"
+            return "$state · Audio $lastSeen · Sessions $sessions — ${lastAction ?: "no announcement yet"}"
         }
 
     private val resume = Runnable {
@@ -100,6 +105,7 @@ object AnnouncementPauser {
             it.registerAudioPlaybackCallback(callback, handler)
             Log.i(TAG, "watching for announcements")
         }
+        watching = true
     }
 
     /** Stops watching and lets any media we paused play again. Idempotent. */
@@ -108,14 +114,14 @@ object AnnouncementPauser {
         audioManager?.let { runCatching { it.unregisterAudioPlaybackCallback(callback) } }
         audioManager = null
         appContext = null
+        watching = false
         if (pausedByUs) MediaControlService.resumePausedMedia()
         pausedByUs = false
         audioAnnouncing = false
         sessionAnnouncing = false
         mediaPlaying = false
         announcementActive = false
-        lastSeen = "nothing seen yet"
-        lastAction = null
+        // lastSeen/lastAction are kept, so the diagnostic still shows the last session's result.
     }
 
     /** Called by [MediaControlService] when a session playing a speech stream starts or stops. */

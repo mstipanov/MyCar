@@ -260,7 +260,7 @@ class MainActivity : AppCompatActivity() {
         pauseAnnouncementsView.setOnCheckedChangeListener { _, checked ->
             Settings.setPauseForAnnouncements(this, checked)
             if (checked) {
-                if (ScreenMirrorService.isRunning) AnnouncementPauser.start(this)
+                AnnouncementPauser.start(this)
                 if (!notificationAccessGranted()) openNotificationAccessSettings()
             } else {
                 AnnouncementPauser.stop()
@@ -307,9 +307,7 @@ class MainActivity : AppCompatActivity() {
         }
         updateTouchControlUi()
         updateNotificationAccessUi()
-        if (pauseAnnouncementsView.isChecked && ScreenMirrorService.isRunning) {
-            AnnouncementPauser.start(this)
-        }
+        if (pauseAnnouncementsView.isChecked) AnnouncementPauser.start(this)
         updateAnnouncementStatusUi()
         syncWatcher()
         maybeAutoStart()

@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta7
+- The announcement diagnostic now keeps its last result after mirroring stops and watches whenever the setting is on (it only *acts* while mirroring), so it can be read on the phone after a drive
+
 ## 1.33-beta6
 - Announcement pausing now also watches media **sessions**, so a "News & Talk / Speech" app like Radarbot is detected even when its audio player is not tagged as speech; the diagnostic now lists the active sessions too
 

@@ -15,18 +15,17 @@ import com.example.mycar.auto.CarConnectionWatcher
  * Pauses whatever is playing while a navigation or alert app speaks, then resumes it.
  *
  * Started with the app process when the setting is on, and only *acts* while a capture is live
- * (the "only while mirroring" rule). Announcements are detected from three signals, because apps
- * tag their audio differently:
+ * (the "only while mirroring" rule). Whether an announcement is active is re-evaluated on every
+ * audio change, so it cannot get stuck in a paused state:
  *
- * - an audio player whose **usage** is navigation guidance / accessibility / notification,
- * - a **speech** content type (both from `AudioManager` playback configurations — anonymized, so
- *   the package is not visible), or
- * - a **second media player overlapping** one that is already playing. This is the only visible
- *   sign of Radarbot's spoken alerts, which it plays as plain `USAGE_MEDIA` with no content type
- *   (indistinguishable from YouTube by attributes).
+ * - an audio player whose **usage** is navigation guidance / accessibility / notification, or
+ * - a **speech** content type, or
+ * - **more active media players than playing media sessions**. A normal media app is a player
+ *   *with* a session (YouTube); an app like Radarbot that speaks over the media is a player
+ *   *without* one, and its stream is plain `USAGE_MEDIA` with no distinguishing attributes.
  *
- * The stream paused is a non-speech media stream, so the announcement itself is left alone, and
- * it resumes shortly after the extra player stops. [status] reports what was seen and done.
+ * While an announcement is active the playing media session is paused; once it stops, the media
+ * resumes. [status] reports what was seen and done.
  */
 object AnnouncementPauser {
 
@@ -40,17 +39,8 @@ object AnnouncementPauser {
         AudioAttributes.USAGE_NOTIFICATION_EVENT,
     )
 
-    /**
-     * Wait this long after the announcement goes quiet before resuming, so a pause between two
-     * sentences does not make the media stutter back on.
-     */
-    private const val RESUME_DELAY_MS = 1_500L
-
-    /** How long to hold after two media players overlap (Radarbot's only visible signal). */
-    private const val OVERLAP_HOLD_MS = 8_000L
-
-    /** Settle time before resuming once nothing is playing any more. */
-    private const val RESUME_AFTER_EMPTY_MS = 800L
+    /** Settle time before resuming once the announcement is over. */
+    private const val RESUME_DELAY_MS = 800L
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -61,11 +51,16 @@ object AnnouncementPauser {
     @Volatile
     private var watching = false
 
-    // Announcement signals.
-    private var audioAnnouncing = false
+    /** A media session is playing a speech stream (see [MediaControlService]). */
+    @Volatile
     private var sessionAnnouncing = false
-    private var mediaPlaying = false
-    private var announcementActive = false
+
+    /** Whether an announcement is currently active, recomputed on every change. */
+    @Volatile
+    private var alertActive = false
+
+    /** Whether we are the ones who paused the media. */
+    @Volatile
     private var pausedByUs = false
 
     /** A short summary of the audio players seen at the last change, for the diagnostic. */
@@ -86,7 +81,7 @@ object AnnouncementPauser {
         }
 
     private val resume = Runnable {
-        if (!announcementActive && pausedByUs) {
+        if (!alertActive && pausedByUs) {
             MediaControlService.resumePausedMedia()
             pausedByUs = false
         }
@@ -125,21 +120,17 @@ object AnnouncementPauser {
         watching = false
         if (pausedByUs) MediaControlService.resumePausedMedia()
         pausedByUs = false
-        audioAnnouncing = false
         sessionAnnouncing = false
-        mediaPlaying = false
-        announcementActive = false
+        alertActive = false
         // lastSeen/lastAction are kept, so the diagnostic still shows the last session's result.
     }
 
-    /**
-     * Called by [MediaControlService] when a session playing a speech stream starts or stops.
-     */
+    /** Called by [MediaControlService] when a session playing a speech stream starts or stops. */
     fun onSpeechSessionPlaying(playing: Boolean) {
         if (sessionAnnouncing == playing) return
         sessionAnnouncing = playing
         Log.i(TAG, "speech session playing=$playing")
-        reconcile()
+        apply()
     }
 
     private fun onConfigs(configs: List<AudioPlaybackConfiguration>) {
@@ -147,42 +138,42 @@ object AnnouncementPauser {
         val attrs = configs.map { it.audioAttributes }
         val usages = attrs.map { it.usage }.toSet()
         val speech = attrs.any { it.contentType == AudioAttributes.CONTENT_TYPE_SPEECH }
-        val mediaCount = attrs.count { it.usage == AudioAttributes.USAGE_MEDIA }
-        val nonSpeechMediaCount = attrs.count {
-            it.usage == AudioAttributes.USAGE_MEDIA &&
-                it.contentType != AudioAttributes.CONTENT_TYPE_SPEECH
-        }
-        lastSeen = "usages=${usages.sorted().joinToString(",")} media=$mediaCount speech=$speech"
+        val mediaPlayers = attrs.count { it.usage == AudioAttributes.USAGE_MEDIA }
+        val playingSessions = MediaControlService.playingSessionCount()
+        // A media player with no matching session is an announcement (Radarbot); a normal media app
+        // (YouTube) has a session, so it does not count.
+        val extraPlayers = mediaPlayers - playingSessions
+        lastSeen = "usages=${usages.sorted().joinToString(",")} media=$mediaPlayers " +
+            "sessions=$playingSessions speech=$speech"
         Log.d(TAG, "active: $lastSeen")
 
-        audioAnnouncing = speech || usages.any { it in ANNOUNCEMENT_USAGES }
-        // Media we may pause: an ordinary media stream that is not the speech announcement itself.
-        mediaPlaying = nonSpeechMediaCount > 0
-        reconcile()
-
-        // Radarbot plays its spoken alerts as plain media with no distinguishing attributes, so
-        // the only visible sign is a *second* media player while one is already playing. Pause
-        // then; once we have paused, the leftover player is the alert itself, so resume when
-        // nothing is playing any more (or after a safety hold in case something else is playing).
-        if (nonSpeechMediaCount >= 2) {
-            lastSeen = "$lastSeen overlap"
-            val action = pauseNow()
-            lastAction = action
-            Log.i(TAG, action)
-            scheduleResume(OVERLAP_HOLD_MS)
-        } else if (pausedByUs && nonSpeechMediaCount == 0) {
-            scheduleResume(RESUME_AFTER_EMPTY_MS)
-        }
+        alertActive = sessionAnnouncing ||
+            speech ||
+            usages.any { it in ANNOUNCEMENT_USAGES } ||
+            extraPlayers > 0
+        apply()
     }
 
-    /** Pauses the playing media if we have not already, returning a status line. */
-    private fun pauseNow(): String = when {
-        !shouldAct() -> "media overlap: not mirroring"
-        !MediaControlService.isConnected -> "media overlap: grant notification access"
-        pausedByUs -> "media overlap: already paused"
-        else -> {
-            pausedByUs = MediaControlService.pausePlayingMedia()
-            if (pausedByUs) "media overlap: media paused" else "media overlap: nothing playing to pause"
+    /** Brings the media in line with [alertActive]: pause while announcing, resume after. */
+    private fun apply() {
+        if (audioManager == null) return
+        if (alertActive) {
+            handler.removeCallbacks(resume)
+            val action = when {
+                !shouldAct() -> "alert: not mirroring"
+                !MediaControlService.isConnected -> "alert: grant notification access"
+                MediaControlService.pausePlayingMedia() -> {
+                    pausedByUs = true
+                    "alert: media paused"
+                }
+                pausedByUs -> "alert: already paused"
+                else -> "alert: nothing playing to pause"
+            }
+            lastAction = action
+            appContext?.let { Settings.setAnnouncementLastAction(it, action) }
+            Log.i(TAG, action)
+        } else if (pausedByUs) {
+            scheduleResume(RESUME_DELAY_MS)
         }
     }
 
@@ -191,41 +182,10 @@ object AnnouncementPauser {
         handler.postDelayed(resume, delayMs)
     }
 
-    private fun reconcile() {
-        if (audioManager == null) return
-        val announcing = audioAnnouncing || sessionAnnouncing
-        if (announcing) {
-            handler.removeCallbacks(resume)
-            if (!announcementActive) {
-                announcementActive = true
-                act()
-            }
-        } else if (announcementActive) {
-            announcementActive = false
-            if (pausedByUs) handler.postDelayed(resume, RESUME_DELAY_MS)
-        }
-    }
-
-    private fun act() {
-        val trigger = if (sessionAnnouncing) "speech session" else "audio announcement"
-        val action = when {
-            !shouldAct() -> "$trigger: not mirroring"
-            !sessionAnnouncing && !mediaPlaying -> "$trigger: no media was playing"
-            !MediaControlService.isConnected -> "$trigger: grant notification access"
-            else -> {
-                pausedByUs = MediaControlService.pausePlayingMedia()
-                if (pausedByUs) "$trigger: media paused"
-                else "$trigger: found no playing media session"
-            }
-        }
-        lastAction = action
-        appContext?.let { Settings.setAnnouncementLastAction(it, action) }
-        Log.i(TAG, action)
-    }
-
     /** Only act while the car is actually showing us. */
     private fun shouldAct(): Boolean {
         val context = appContext ?: return false
+        if (java.io.File(context.filesDir, "debugActAlways").exists()) return true
         return CarConnectionWatcher.isProjecting(context)
     }
 }

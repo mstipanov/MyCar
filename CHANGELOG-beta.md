@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta15
+- Fix announcement pausing only working for the first alert: the paused state is now recomputed on every audio change (a media player with no media session) instead of a latch that could get stuck
+
 ## 1.33-beta14
 - Remove the desk-test override; announcement pausing now acts only while mirroring, as intended
 

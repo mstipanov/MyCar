@@ -116,6 +116,16 @@ class MediaControlService : NotificationListenerService() {
     private fun activeSessions(): List<MediaController> =
         runCatching { mediaSessionManager()?.getActiveSessions(componentName()) }.getOrNull().orEmpty()
 
+    /** Number of media sessions currently playing, excluding MyCar. */
+    private fun countPlayingSessions(): Int =
+        (controllers + activeSessions())
+            .filter {
+                it.packageName != packageName &&
+                    it.playbackState?.state == PlaybackState.STATE_PLAYING
+            }
+            .distinctBy { it.sessionToken }
+            .size
+
     /** Resumes the session [pauseMedia] stopped, unless it is already playing again. */
     private fun resumeMedia() {
         val controller = paused ?: return
@@ -153,6 +163,9 @@ class MediaControlService : NotificationListenerService() {
 
         /** A one-line list of the active media sessions, for the settings-screen diagnostic. */
         fun activeSessionSummary(): String? = instance?.sessionSummary
+
+        /** How many media sessions (other than MyCar) are playing right now. */
+        fun playingSessionCount(): Int = instance?.countPlayingSessions() ?: 0
 
         fun pausePlayingMedia(): Boolean = instance?.pauseMedia() == true
 

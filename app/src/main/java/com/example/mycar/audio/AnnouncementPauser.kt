@@ -223,9 +223,13 @@ object AnnouncementPauser {
         Log.i(TAG, action)
     }
 
-    /** Only act while the car is actually showing us. */
+    /**
+     * Only act while the car is actually showing us. The `files/debugActAlways` marker (only
+     * creatable in a debuggable build, e.g. via `adb shell run-as`) relaxes that for desk testing.
+     */
     private fun shouldAct(): Boolean {
         val context = appContext ?: return false
+        if (java.io.File(context.filesDir, "debugActAlways").exists()) return true
         return CarConnectionWatcher.isProjecting(context)
     }
 }

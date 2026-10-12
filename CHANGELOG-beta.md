@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta13
+- Restore the desk-test override so announcement pausing can be checked away from the car (it only affects debuggable builds)
+
 ## 1.33-beta12
 - Finalise announcement pausing: the desktop-only debug override and the unused notification path are removed
 

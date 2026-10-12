@@ -26,6 +26,7 @@ object Settings {
     const val KEY_CLOSE_APP_HARD = "closeAppHard"
     const val KEY_THEME_MODE = "themeMode"
     const val KEY_PAUSE_FOR_ANNOUNCEMENTS = "pauseForAnnouncements"
+    const val KEY_ANN_LAST_ACTION = "announcementLastAction"
 
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
@@ -214,6 +215,14 @@ object Settings {
 
     fun setPauseForAnnouncements(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_PAUSE_FOR_ANNOUNCEMENTS, enabled).apply()
+    }
+
+    /** The last announcement result, kept so the diagnostic survives a process restart. */
+    fun announcementLastAction(context: Context): String? =
+        prefs(context).getString(KEY_ANN_LAST_ACTION, null)
+
+    fun setAnnouncementLastAction(context: Context, value: String) {
+        prefs(context).edit().putString(KEY_ANN_LAST_ACTION, value).apply()
     }
 
     /** Package of the app to close when Android Auto disconnects, or blank for none. */

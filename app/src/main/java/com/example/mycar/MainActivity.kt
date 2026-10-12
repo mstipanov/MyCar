@@ -413,10 +413,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows what the last announcement did, so a mismatch is visible without logcat. */
     private fun updateAnnouncementStatusUi() {
-        val enabled = pauseAnnouncementsView.isChecked
-        announcementStatusView.visibility = if (enabled) View.VISIBLE else View.GONE
+        announcementStatusView.visibility =
+            if (pauseAnnouncementsView.isChecked) View.VISIBLE else View.GONE
         announcementStatusView.text = AnnouncementPauser.status
-            ?: getString(R.string.announcement_status_none)
     }
 
     /** Shows how many apps will open once mirroring starts, or the prompt when none is set. */

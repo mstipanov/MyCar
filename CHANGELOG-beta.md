@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta8
+- The announcement watcher now starts with the app process (not only when the settings screen or mirroring opens), and the diagnostic always shows the live state and app version
+
 ## 1.33-beta7
 - The announcement diagnostic now keeps its last result after mirroring stops and watches whenever the setting is on (it only *acts* while mirroring), so it can be read on the phone after a drive
 

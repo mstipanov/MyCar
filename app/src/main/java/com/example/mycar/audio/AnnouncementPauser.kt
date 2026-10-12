@@ -7,6 +7,7 @@ import android.media.AudioPlaybackConfiguration
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.example.mycar.BuildConfig
 import com.example.mycar.Settings
 import com.example.mycar.auto.CarConnectionWatcher
 
@@ -69,13 +70,13 @@ object AnnouncementPauser {
     @Volatile
     private var lastAction: String? = null
 
-    /** One-line diagnostic for the settings screen; null only when idle with nothing seen yet. */
-    val status: String?
+    /** One-line diagnostic for the settings screen. Never null, so the UI always shows the state. */
+    val status: String
         get() {
-            if (!watching && lastAction == null && lastSeen == "nothing seen yet") return null
             val state = if (watching) "Watching" else "Idle"
             val sessions = MediaControlService.activeSessionSummary() ?: "no access"
-            return "$state · Audio $lastSeen · Sessions $sessions — ${lastAction ?: "no announcement yet"}"
+            return "v${BuildConfig.VERSION_NAME} · $state · Audio $lastSeen · " +
+                "Sessions $sessions — ${lastAction ?: "no announcement yet"}"
         }
 
     private val resume = Runnable {
@@ -100,6 +101,7 @@ object AnnouncementPauser {
         val ctx = context.applicationContext
         appContext = ctx
         if (!Settings.pauseForAnnouncements(ctx)) return
+        if (lastAction == null) lastAction = Settings.announcementLastAction(ctx)
         if (audioManager != null) return
         audioManager = ctx.getSystemService(AudioManager::class.java)?.also {
             it.registerAudioPlaybackCallback(callback, handler)
@@ -177,6 +179,7 @@ object AnnouncementPauser {
             }
         }
         lastAction = action
+        appContext?.let { Settings.setAnnouncementLastAction(it, action) }
         Log.i(TAG, action)
     }
 

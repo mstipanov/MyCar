@@ -167,6 +167,11 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   to really stop the app — media and background work included — by driving the app-info screen's
   *Force stop*, which needs the phone awake and unlocked. See
   [Hands-free start](#hands-free-start).
+* **Pause media during announcements** — pauses whatever is playing (YouTube, music) while a
+  navigation or alert app speaks, then resumes it. It matches the announcement by audio usage or
+  speech content type where available, and otherwise by a media player that has no media session
+  (Radarbot's spoken alerts are tagged as plain media). Needs *Notification access*, and only acts
+  while mirroring.
 * **Show the quick launch menu on the car screen** — a slim, icon-only strip of shortcuts beside
   the mirror: a column on the right, or along the bottom while the media panel is open. The strip
   gets its own space, so it never covers the mirror. Tapping an icon opens that phone app (needs

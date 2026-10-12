@@ -26,9 +26,6 @@ class MediaControlService : NotificationListenerService() {
     /** Active sessions, each with a callback so we hear their playback-state changes. */
     private var controllers: List<MediaController> = emptyList()
 
-    /** A snapshot of the sessions for the settings-screen diagnostic, or null when not connected. */
-    private var sessionSummary: String? = null
-
     private val controllerCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) = refreshSessions()
     }
@@ -52,7 +49,6 @@ class MediaControlService : NotificationListenerService() {
             mediaSessionManager()?.removeOnActiveSessionsChangedListener(sessionsChanged)
         }
         paused = null
-        sessionSummary = null
         if (instance === this) instance = null
         Log.i(TAG, "disconnected")
         super.onListenerDisconnected()
@@ -81,13 +77,9 @@ class MediaControlService : NotificationListenerService() {
         controllers = emptyList()
     }
 
-    /** Recomputes the snapshot and tells the pauser whether a speech stream is playing. */
+    /** Recomputes the sessions and tells the pauser whether a speech stream is playing. */
     private fun refreshSessions() {
         val others = controllers.filter { it.packageName != packageName }
-        sessionSummary = others.joinToString("; ") {
-            "${it.packageName}: type=${it.contentType()}, state=${it.playbackState?.state}"
-        }.ifEmpty { "none" }
-
         AnnouncementPauser.onSpeechSessionPlaying(
             others.any { it.isPlaying() && it.isSpeech() },
         )
@@ -98,9 +90,6 @@ class MediaControlService : NotificationListenerService() {
 
     private fun MediaController.isSpeech() =
         playbackInfo?.audioAttributes?.contentType == AudioAttributes.CONTENT_TYPE_SPEECH
-
-    private fun MediaController.contentType(): Int =
-        playbackInfo?.audioAttributes?.contentType ?: -1
 
     /** Pauses the playing media session, skipping MyCar and any speech announcement. */
     private fun pauseMedia(): Boolean {
@@ -160,9 +149,6 @@ class MediaControlService : NotificationListenerService() {
 
         /** Whether Notification access is granted and the listener is bound. */
         val isConnected: Boolean get() = instance != null
-
-        /** A one-line list of the active media sessions, for the settings-screen diagnostic. */
-        fun activeSessionSummary(): String? = instance?.sessionSummary
 
         /** How many media sessions (other than MyCar) are playing right now. */
         fun playingSessionCount(): Int = instance?.countPlayingSessions() ?: 0

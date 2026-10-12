@@ -7,7 +7,6 @@ import android.media.AudioPlaybackConfiguration
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.mycar.BuildConfig
 import com.example.mycar.Settings
 import com.example.mycar.auto.CarConnectionWatcher
 
@@ -25,7 +24,7 @@ import com.example.mycar.auto.CarConnectionWatcher
  *   *without* one, and its stream is plain `USAGE_MEDIA` with no distinguishing attributes.
  *
  * While an announcement is active the playing media session is paused; once it stops, the media
- * resumes. [status] reports what was seen and done.
+ * resumes.
  */
 object AnnouncementPauser {
 
@@ -63,23 +62,6 @@ object AnnouncementPauser {
     @Volatile
     private var pausedByUs = false
 
-    /** A short summary of the audio players seen at the last change, for the diagnostic. */
-    @Volatile
-    private var lastSeen: String = "nothing seen yet"
-
-    /** What the last announcement did, or null if none has been seen. */
-    @Volatile
-    private var lastAction: String? = null
-
-    /** One-line diagnostic for the settings screen. Never null, so the UI always shows the state. */
-    val status: String
-        get() {
-            val state = if (watching) "Watching" else "Idle"
-            val sessions = MediaControlService.activeSessionSummary() ?: "no access"
-            return "v${BuildConfig.VERSION_NAME} · $state · Audio $lastSeen · " +
-                "Sessions $sessions — ${lastAction ?: "no announcement yet"}"
-        }
-
     private val resume = Runnable {
         if (!alertActive && pausedByUs) {
             MediaControlService.resumePausedMedia()
@@ -102,7 +84,6 @@ object AnnouncementPauser {
         val ctx = context.applicationContext
         appContext = ctx
         if (!Settings.pauseForAnnouncements(ctx)) return
-        if (lastAction == null) lastAction = Settings.announcementLastAction(ctx)
         if (audioManager != null) return
         audioManager = ctx.getSystemService(AudioManager::class.java)?.also {
             it.registerAudioPlaybackCallback(callback, handler)
@@ -122,7 +103,6 @@ object AnnouncementPauser {
         pausedByUs = false
         sessionAnnouncing = false
         alertActive = false
-        // lastSeen/lastAction are kept, so the diagnostic still shows the last session's result.
     }
 
     /** Called by [MediaControlService] when a session playing a speech stream starts or stops. */
@@ -143,9 +123,11 @@ object AnnouncementPauser {
         // A media player with no matching session is an announcement (Radarbot); a normal media app
         // (YouTube) has a session, so it does not count.
         val extraPlayers = mediaPlayers - playingSessions
-        lastSeen = "usages=${usages.sorted().joinToString(",")} media=$mediaPlayers " +
-            "sessions=$playingSessions speech=$speech"
-        Log.d(TAG, "active: $lastSeen")
+        Log.d(
+            TAG,
+            "active: usages=${usages.sorted().joinToString(",")} media=$mediaPlayers " +
+                "sessions=$playingSessions speech=$speech",
+        )
 
         alertActive = sessionAnnouncing ||
             speech ||
@@ -160,32 +142,25 @@ object AnnouncementPauser {
         if (alertActive) {
             handler.removeCallbacks(resume)
             val action = when {
-                !shouldAct() -> "alert: not mirroring"
-                !MediaControlService.isConnected -> "alert: grant notification access"
+                !shouldAct() -> "not mirroring"
+                !MediaControlService.isConnected -> "grant notification access"
                 MediaControlService.pausePlayingMedia() -> {
                     pausedByUs = true
-                    "alert: media paused"
+                    "media paused"
                 }
-                pausedByUs -> "alert: already paused"
-                else -> "alert: nothing playing to pause"
+                pausedByUs -> "already paused"
+                else -> "nothing playing to pause"
             }
-            lastAction = action
-            appContext?.let { Settings.setAnnouncementLastAction(it, action) }
-            Log.i(TAG, action)
+            Log.i(TAG, "announcement: $action")
         } else if (pausedByUs) {
-            scheduleResume(RESUME_DELAY_MS)
+            handler.removeCallbacks(resume)
+            handler.postDelayed(resume, RESUME_DELAY_MS)
         }
-    }
-
-    private fun scheduleResume(delayMs: Long) {
-        handler.removeCallbacks(resume)
-        handler.postDelayed(resume, delayMs)
     }
 
     /** Only act while the car is actually showing us. */
     private fun shouldAct(): Boolean {
         val context = appContext ?: return false
-        if (java.io.File(context.filesDir, "debugActAlways").exists()) return true
         return CarConnectionWatcher.isProjecting(context)
     }
 }

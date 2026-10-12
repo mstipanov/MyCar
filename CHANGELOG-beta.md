@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta6
+- Announcement pausing now also watches media **sessions**, so a "News & Talk / Speech" app like Radarbot is detected even when its audio player is not tagged as speech; the diagnostic now lists the active sessions too
+
 ## 1.33-beta5
 - Announcement pausing now also triggers on a **speech** content type (Radarbot's "News & Talk" stream), and no longer pauses a speech stream by mistake
 

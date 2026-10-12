@@ -14,17 +14,18 @@ import com.example.mycar.auto.CarConnectionWatcher
  * Pauses whatever is playing while a navigation or alert app speaks, then resumes it.
  *
  * Started while a capture is live (the "only while mirroring" rule) and whenever the setting is
- * switched on during a session; [stop] runs when mirroring ends. A normal app receives
- * *anonymized* playback configurations, so the trigger is how the stream is tagged, not which
- * package it is:
+ * switched on during a session; [stop] runs when mirroring ends. Two signals count as an
+ * announcement:
  *
- * - an announcement **usage** (navigation guidance / accessibility / notification), or
- * - a **speech** content type — this is Radarbot's "News & Talk / Speech" stream, and covers apps
- *   that play announcements as ordinary media.
+ * - an audio player whose **usage** is navigation guidance / accessibility / notification, or a
+ *   **speech** content type (from `AudioManager` playback configurations — anonymized, so the
+ *   package is not visible), and
+ * - a media **session** playing a speech stream (`MediaControlService`), which is how a
+ *   "News & Talk / Speech" app such as Radarbot shows up.
  *
- * What gets paused is a media stream that is *not* speech, so the announcement itself is left
- * alone. [status] reports what was seen and done, so the settings screen can show why it acted or
- * did not, without logcat.
+ * The stream that is paused is always a *non-speech* media stream, so the announcement itself is
+ * left alone. [status] reports what was seen and done, so the settings screen can show why it
+ * acted or did not, without logcat.
  */
 object AnnouncementPauser {
 
@@ -48,10 +49,15 @@ object AnnouncementPauser {
 
     private var appContext: Context? = null
     private var audioManager: AudioManager? = null
+
+    // Announcement signals.
+    private var audioAnnouncing = false
+    private var sessionAnnouncing = false
+    private var mediaPlaying = false
     private var announcementActive = false
     private var pausedByUs = false
 
-    /** A short summary of the usages/content types seen at the last change, for the diagnostic. */
+    /** A short summary of the audio players seen at the last change, for the diagnostic. */
     @Volatile
     private var lastSeen: String = "nothing seen yet"
 
@@ -63,7 +69,8 @@ object AnnouncementPauser {
     val status: String?
         get() {
             if (audioManager == null) return null
-            return "Audio $lastSeen — ${lastAction ?: "no announcement seen yet"}"
+            val sessions = MediaControlService.activeSessionSummary() ?: "no access"
+            return "Audio $lastSeen · Sessions $sessions — ${lastAction ?: "no announcement yet"}"
         }
 
     private val resume = Runnable {
@@ -103,9 +110,20 @@ object AnnouncementPauser {
         appContext = null
         if (pausedByUs) MediaControlService.resumePausedMedia()
         pausedByUs = false
+        audioAnnouncing = false
+        sessionAnnouncing = false
+        mediaPlaying = false
         announcementActive = false
         lastSeen = "nothing seen yet"
         lastAction = null
+    }
+
+    /** Called by [MediaControlService] when a session playing a speech stream starts or stops. */
+    fun onSpeechSessionPlaying(playing: Boolean) {
+        if (sessionAnnouncing == playing) return
+        sessionAnnouncing = playing
+        Log.i(TAG, "speech session playing=$playing")
+        reconcile()
     }
 
     private fun onConfigs(configs: List<AudioPlaybackConfiguration>) {
@@ -116,40 +134,40 @@ object AnnouncementPauser {
         lastSeen = "usages=${usages.sorted().joinToString(",")} speech=$speech"
         Log.d(TAG, "active: $lastSeen")
 
-        val announcing = speech || usages.any { it in ANNOUNCEMENT_USAGES }
+        audioAnnouncing = speech || usages.any { it in ANNOUNCEMENT_USAGES }
         // Media we may pause: an ordinary media stream that is not the speech announcement itself.
-        val mediaPlaying = attrs.any {
+        mediaPlaying = attrs.any {
             it.usage == AudioAttributes.USAGE_MEDIA &&
                 it.contentType != AudioAttributes.CONTENT_TYPE_SPEECH
         }
+        reconcile()
+    }
 
+    private fun reconcile() {
+        if (audioManager == null) return
+        val announcing = audioAnnouncing || sessionAnnouncing
         if (announcing) {
             handler.removeCallbacks(resume)
             if (!announcementActive) {
                 announcementActive = true
-                Log.i(TAG, "announcement started ($lastSeen)")
-                act(speech, mediaPlaying)
+                act()
             }
         } else if (announcementActive) {
             announcementActive = false
-            Log.i(TAG, "announcement ended")
             if (pausedByUs) handler.postDelayed(resume, RESUME_DELAY_MS)
         }
     }
 
-    private fun act(speech: Boolean, mediaPlaying: Boolean) {
-        val trigger = if (speech) "speech" else "announcement usage"
+    private fun act() {
+        val trigger = if (sessionAnnouncing) "speech session" else "audio announcement"
         val action = when {
             !shouldAct() -> "$trigger: not mirroring"
-            !mediaPlaying -> "$trigger: no media was playing"
+            !sessionAnnouncing && !mediaPlaying -> "$trigger: no media was playing"
             !MediaControlService.isConnected -> "$trigger: grant notification access"
             else -> {
                 pausedByUs = MediaControlService.pausePlayingMedia()
-                if (pausedByUs) {
-                    "$trigger: media paused"
-                } else {
-                    "$trigger: found no playing media session"
-                }
+                if (pausedByUs) "$trigger: media paused"
+                else "$trigger: found no playing media session"
             }
         }
         lastAction = action

@@ -13,55 +13,108 @@ import android.util.Log
 import android.view.KeyEvent
 
 /**
- * A notification listener whose only job is to let MyCar control the phone's current media
- * session — through a [MediaController], which is the only way a normal app can pause and resume
- * another app's playback. The user enables it by hand in Settings -> Notification access; the
- * service does nothing else with notifications.
+ * A notification listener whose only job is to let MyCar see and control the phone's media
+ * sessions. Enabling it in Settings -> Notification access is what unlocks both
+ * [MediaSessionManager.getActiveSessions] (so we can find the stream to pause, and spot a speech
+ * announcement) and a [MediaController] to pause/resume another app's playback.
  */
 class MediaControlService : NotificationListenerService() {
 
     /** The session we last paused, so [resumeMedia] puts back only what we took. */
     private var paused: MediaController? = null
 
+    /** Active sessions, each with a callback so we hear their playback-state changes. */
+    private var controllers: List<MediaController> = emptyList()
+
+    /** A snapshot of the sessions for the settings-screen diagnostic, or null when not connected. */
+    private var sessionSummary: String? = null
+
+    private val controllerCallback = object : MediaController.Callback() {
+        override fun onPlaybackStateChanged(state: PlaybackState?) = refreshSessions()
+    }
+
+    private val sessionsChanged =
+        MediaSessionManager.OnActiveSessionsChangedListener { controllers -> bindControllers(controllers) }
+
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
         Log.i(TAG, "connected")
+        runCatching {
+            mediaSessionManager()?.addOnActiveSessionsChangedListener(sessionsChanged, componentName())
+        }
+        bindControllers(runCatching { mediaSessionManager()?.getActiveSessions(componentName()) }.getOrNull())
     }
 
     override fun onListenerDisconnected() {
-        if (instance === this) instance = null
+        unbindControllers()
+        runCatching {
+            mediaSessionManager()?.removeOnActiveSessionsChangedListener(sessionsChanged)
+        }
         paused = null
+        sessionSummary = null
+        if (instance === this) instance = null
         Log.i(TAG, "disconnected")
         super.onListenerDisconnected()
     }
 
     override fun onDestroy() {
+        unbindControllers()
         if (instance === this) instance = null
         super.onDestroy()
     }
 
-    /** The session that is playing media right now, ignoring MyCar and any speech announcement. */
-    private fun playingController(): MediaController? = runCatching {
-        val manager = getSystemService(MediaSessionManager::class.java)
-        manager.getActiveSessions(ComponentName(this, MediaControlService::class.java))
-    }.getOrDefault(emptyList())
-        .firstOrNull { controller ->
-            controller.packageName != packageName &&
-                controller.playbackState?.state == PlaybackState.STATE_PLAYING &&
-                // Never pause the announcement itself (Radarbot plays as a speech stream).
-                controller.playbackInfo?.audioAttributes?.contentType !=
-                    AudioAttributes.CONTENT_TYPE_SPEECH
-        }
+    private fun mediaSessionManager(): MediaSessionManager? =
+        getSystemService(MediaSessionManager::class.java)
 
-    /** Pauses the playing media. True when there was something to pause. */
+    private fun componentName() = ComponentName(this, MediaControlService::class.java)
+
+    private fun bindControllers(list: List<MediaController>?) {
+        unbindControllers()
+        controllers = list.orEmpty()
+        controllers.forEach { runCatching { it.registerCallback(controllerCallback) } }
+        refreshSessions()
+    }
+
+    private fun unbindControllers() {
+        controllers.forEach { runCatching { it.unregisterCallback(controllerCallback) } }
+        controllers = emptyList()
+    }
+
+    /** Recomputes the snapshot and tells the pauser whether a speech stream is playing. */
+    private fun refreshSessions() {
+        val others = controllers.filter { it.packageName != packageName }
+        sessionSummary = others.joinToString("; ") {
+            "${it.packageName}: type=${it.contentType()}, state=${it.playbackState?.state}"
+        }.ifEmpty { "none" }
+
+        AnnouncementPauser.onSpeechSessionPlaying(
+            others.any { it.isPlaying() && it.isSpeech() },
+        )
+    }
+
+    private fun MediaController.isPlaying() =
+        playbackState?.state == PlaybackState.STATE_PLAYING
+
+    private fun MediaController.isSpeech() =
+        playbackInfo?.audioAttributes?.contentType == AudioAttributes.CONTENT_TYPE_SPEECH
+
+    private fun MediaController.contentType(): Int =
+        playbackInfo?.audioAttributes?.contentType ?: -1
+
+    /** Pauses the playing media session, skipping MyCar and any speech announcement. */
     private fun pauseMedia(): Boolean {
-        val controller = playingController() ?: return false
+        val controller = (controllers + activeSessions()).firstOrNull {
+            it.packageName != packageName && it.isPlaying() && !it.isSpeech()
+        } ?: return false
         paused = controller
         controller.transportControls.pause()
         Log.i(TAG, "paused ${controller.packageName}")
         return true
     }
+
+    private fun activeSessions(): List<MediaController> =
+        runCatching { mediaSessionManager()?.getActiveSessions(componentName()) }.getOrNull().orEmpty()
 
     /** Resumes the session [pauseMedia] stopped, unless it is already playing again. */
     private fun resumeMedia() {
@@ -97,6 +150,9 @@ class MediaControlService : NotificationListenerService() {
 
         /** Whether Notification access is granted and the listener is bound. */
         val isConnected: Boolean get() = instance != null
+
+        /** A one-line list of the active media sessions, for the settings-screen diagnostic. */
+        fun activeSessionSummary(): String? = instance?.sessionSummary
 
         fun pausePlayingMedia(): Boolean = instance?.pauseMedia() == true
 

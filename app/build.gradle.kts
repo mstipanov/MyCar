@@ -26,7 +26,7 @@ android {
         applicationId = "com.example.mycar"
         minSdk = 28
         targetSdk = 36
-        versionCode = 48
+        versionCode = 52
         versionName = "1.33"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -58,7 +58,7 @@ android {
         // build (same package, same signature).
         create("beta") {
             initWith(getByName("debug"))
-            versionNameSuffix = "-beta8"
+            versionNameSuffix = "-beta12"
             buildConfigField("String", "UPDATE_BASE_URL", "\"https://mycar-beta.sting.hr\"")
             // Sign beta with the release key too, so a beta installs over the stable app (and vice
             // versa): they share a package name, so they must share a signature.

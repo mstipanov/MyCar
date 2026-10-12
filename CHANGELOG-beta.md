@@ -3,6 +3,18 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta12
+- Finalise announcement pausing: the desktop-only debug override and the unused notification path are removed
+
+## 1.33-beta11
+- Announcement pausing now stays paused while the alert is still playing and resumes once it ends, instead of using a fixed hold
+
+## 1.33-beta10
+- Detect Radarbot's untagged spoken alerts by the brief overlap of two media players (YouTube + Radarbot), holding the media paused briefly
+
+## 1.33-beta9
+- Announcement pausing now also triggers on Radarbot's alert **notification**, because its spoken alerts are played as plain media with no distinguishing audio attributes
+
 ## 1.33-beta8
 - The announcement watcher now starts with the app process (not only when the settings screen or mirroring opens), and the diagnostic always shows the live state and app version
 

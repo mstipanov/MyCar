@@ -1,5 +1,9 @@
 # MyCar
 
+## 1.34
+- Fixed drag-to-scroll from the car touchscreen: a pan no longer jumps, drifts or lands as a stray tap, and a drag no longer overshoots when you let go
+- Dragging now moves the mirror the same way your finger does, instead of the opposite way
+
 ## 1.33
 - New "Pause media during announcements": YouTube or music pauses while a navigation or alert app (Radarbot, Maps, Waze) speaks, then resumes; needs notification access and works while mirroring
 - Dark mode: the app now has a light and a dark look, with an Appearance setting to pick Light, Dark, or Match system

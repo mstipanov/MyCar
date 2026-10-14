@@ -36,11 +36,14 @@ import com.example.mycar.touch.TouchInjectorService
  * ACCESS_SURFACE. Nothing here is a map: the "map layer" is just an image, which is the whole
  * trick behind this app.
  *
- * The surface is not always fully visible: opening the media or assistant side panel shrinks
- * the area the map may use. The host reports that through [onVisibleAreaChanged] (and the more
- * conservative [onStableAreaChanged]), so the frame is fitted into the visible region rather
- * than the whole surface. How it is fitted is the user's [ScaleMode]: [ScaleMode.FIT] shows the
- * whole screen with black bars, the other modes scale it up and let the overflow be cropped.
+ * The mirror fills the whole map surface, edge to edge, the way native map apps draw. The host
+ * also reports a smaller *visible* area through [onVisibleAreaChanged] (with the more conservative
+ * [onStableAreaChanged] as a fallback) where its own chrome or a media/assistant panel covers the
+ * surface; we draw under that chrome rather than shrink into it, because filling only the inset
+ * left a black frame around the mirror that those apps do not show. Only while a panel is actually
+ * open do we shrink to the visible area, so the mirror is not hidden behind it. How the frame is
+ * scaled into the area is the user's [ScaleMode]: [ScaleMode.FIT] shows the whole screen with black
+ * bars, the other modes scale it up and let the overflow be cropped.
  *
  * The icon-only quick launch strip gets its own space: a column on the right normally, or a row
  * along the bottom while a media/assistant panel is open. The mirror is fitted into what is left,
@@ -136,8 +139,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val surfaceContainer = container
         if (surfaceContainer != null && launcherEnabled()) {
             val density = density(surfaceContainer)
-            val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-            val atBottom = panelShown(area, density)
+            val area = drawingArea(surfaceContainer.width, surfaceContainer.height, density)
+            val atBottom = launcherAtBottom(surfaceContainer.width, surfaceContainer.height, density)
             val entry = launcherLayout(area, density, atBottom).cells
                 .firstOrNull { it.first.contains(x, y) }
                 ?.second
@@ -249,8 +252,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val surfaceContainer = container ?: return null
         val picture = FrameStore.pictureSize() ?: return null
         val density = density(surfaceContainer)
-        val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-        val content = contentArea(area, density, panelShown(area, density))
+        val area = drawingArea(surfaceContainer.width, surfaceContainer.height, density)
+        val content = contentArea(area, density, launcherAtBottom(surfaceContainer.width, surfaceContainer.height, density))
         computeDestination(content, picture.x, picture.y, scratchRect)
         if (scratchRect.isEmpty) return null
         val scale = scratchRect.width() / picture.x
@@ -266,11 +269,12 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     }
 
     /**
-     * The part of the [width] x [height] surface the frame may use, in surface pixels. Falls
-     * back to the whole surface when the host has not reported an area (or reported an empty
-     * one, or one outside the surface).
+     * The part of the [width] x [height] surface the host says is visible right now, in surface
+     * pixels: [visibleArea] if set, else the more conservative [stableArea]. Falls back to the
+     * whole surface when the host has not reported an area (or reported an empty one, or one
+     * outside the surface).
      */
-    private fun drawingArea(width: Int, height: Int): Rect {
+    private fun reportedArea(width: Int, height: Int): Rect {
         val reported = visibleArea ?: stableArea
         if (reported != null) {
             val clamped = Rect(reported)
@@ -281,6 +285,21 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             }
         }
         return Rect(0, 0, width, height)
+    }
+
+    /**
+     * The region the frame is drawn into, and the region its touch transform maps back from.
+     *
+     * Normally the whole surface, edge to edge. The host insets the *visible* area for its own
+     * chrome (its status bar, its app rail) as well as for a media/assistant panel; a native map
+     * app draws under that chrome, but filling only the inset left MyCar with the black frame
+     * around the mirror those apps do not show. So the mirror fills the surface, and its overflow
+     * is cropped per the [ScaleMode]. While a panel is actually covering part of the surface we do
+     * still fall back to the visible area, so the mirror is not hidden behind the panel.
+     */
+    private fun drawingArea(width: Int, height: Int, density: Float): Rect {
+        val reported = reportedArea(width, height)
+        return if (panelShown(reported, density)) reported else Rect(0, 0, width, height)
     }
 
     /**
@@ -319,8 +338,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val picture = FrameStore.pictureSize() ?: return null
 
         val density = density(surfaceContainer)
-        val area = drawingArea(surfaceContainer.width, surfaceContainer.height)
-        val content = contentArea(area, density, panelShown(area, density))
+        val area = drawingArea(surfaceContainer.width, surfaceContainer.height, density)
+        val content = contentArea(area, density, launcherAtBottom(surfaceContainer.width, surfaceContainer.height, density))
         computeDestination(content, picture.x, picture.y, scratchRect)
         if (scratchRect.isEmpty) return null
         if (!scratchRect.contains(x, y)) return null
@@ -339,13 +358,13 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val height = surfaceContainer.height
         if (width <= 0 || height <= 0) return
 
-        val area = drawingArea(width, height)
+        val density = density(surfaceContainer)
+        val area = drawingArea(width, height, density)
         val areaWidth = area.width()
         val areaHeight = area.height()
         if (areaWidth <= 0 || areaHeight <= 0) return
 
-        val density = density(surfaceContainer)
-        val atBottom = panelShown(area, density)
+        val atBottom = launcherAtBottom(width, height, density)
         val content = contentArea(area, density, atBottom)
 
         val canvas: Canvas = try {
@@ -443,6 +462,13 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         return stable.width() < area.width() - tolerance ||
             stable.height() < area.height() - tolerance
     }
+
+    /**
+     * Whether the quick launch strip should sit along the bottom: true while a panel covers part
+     * of the surface. Measured against the host's *visible* area, not the area the mirror fills.
+     */
+    private fun launcherAtBottom(width: Int, height: Int, density: Float): Boolean =
+        panelShown(reportedArea(width, height), density)
 
     /**
      * The part of [area] the mirror may use once the launcher strip is carved out, so the strip

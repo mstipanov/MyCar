@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.graphics.Path
+import android.graphics.Rect
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
@@ -12,7 +13,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.example.mycar.Settings
 
 /**
- * Accessibility service with three jobs:
+ * Accessibility service with four jobs:
  *
  * - Inject taps the user makes on the car mirror, so the car touchscreen can drive the phone
  *   (`canPerformGestures`).
@@ -20,12 +21,14 @@ import com.example.mycar.Settings
  *   (`canRetrieveWindowContent`).
  * - Close the app chosen for "close when Android Auto disconnects": leave it (Home) or force stop
  *   it by driving the app-info screen (`canRetrieveWindowContent`).
+ * - Report the bounds of a floating Picture-in-Picture window, so a car drag can be anchored there
+ *   and grab the window instead of the app behind it (`flagRetrieveInteractiveWindows`).
  *
  * A normal app cannot synthesize input for other apps; an accessibility service with gestures is
  * one of the two supported routes (root is the other). This service acts only when
  * [MirrorSurfaceCallback] forwards a tap, on SystemUI's projection window, or while a force-stop
- * request started by [forceStop] is pending. It never reads or touches anything else. The user
- * enables it manually in Settings -> Accessibility.
+ * request started by [forceStop] is pending; beyond that it only reads the PiP window's bounds. The
+ * user enables it manually in Settings -> Accessibility.
  */
 class TouchInjectorService : AccessibilityService() {
 
@@ -41,18 +44,46 @@ class TouchInjectorService : AccessibilityService() {
     /** 0 = idle, 1 = looking for the Force stop button, 2 = confirming the dialog. */
     private var forceStopPhase = 0
 
+    /** Bounds of the current Picture-in-Picture window in screen pixels, or null when there is one. */
+    private var pipBounds: Rect? = null
+
+    /** Uptime of the last [refreshPictureInPicture], so the getter does not query windows on every scroll. */
+    private var pipCheckedAt = 0L
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        refreshPictureInPicture()
         Log.i(TAG, "connected")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // A PiP window can appear, move or close at any time; a windows-changed event is when the
+        // reported bounds change, so that is when the cache is refreshed.
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) refreshPictureInPicture()
         autoAcceptCapturePrompt(event)
         driveForceStop(event)
     }
 
     override fun onInterrupt() = Unit
+
+    /**
+     * The current Picture-in-Picture window's bounds in screen pixels, or null when there is none.
+     * Read by [MirrorSurfaceCallback] to anchor a drag on the floating window. Cheap: the value is
+     * cached and only re-read on a windows-changed event or after [PIP_REFRESH_MS].
+     */
+    private fun pictureInPictureBounds(): Rect? {
+        if (SystemClock.uptimeMillis() - pipCheckedAt >= PIP_REFRESH_MS) refreshPictureInPicture()
+        return pipBounds
+    }
+
+    /** Re-reads the topmost PiP window's bounds. Requires flagRetrieveInteractiveWindows. */
+    private fun refreshPictureInPicture() {
+        pipCheckedAt = SystemClock.uptimeMillis()
+        pipBounds = windows?.firstOrNull { it.isInPictureInPictureMode() }?.let { window ->
+            Rect().also { window.getBoundsInScreen(it) }
+        }
+    }
 
     /**
      * Presses "Share" on the system screen-capture prompt when auto-start is on, so the car can
@@ -227,6 +258,9 @@ class TouchInjectorService : AccessibilityService() {
         /** How long a force-stop request waits for the app-info screen before giving up. */
         private const val FORCE_STOP_TIMEOUT_MS = 8_000L
 
+        /** How long the cached PiP bounds are reused before being re-read (windows-changed also refreshes). */
+        private const val PIP_REFRESH_MS = 500L
+
         @Volatile
         private var instance: TouchInjectorService? = null
 
@@ -235,6 +269,12 @@ class TouchInjectorService : AccessibilityService() {
 
         /** Injects a tap at the given phone pixel. Returns false if the service is not enabled. */
         fun tap(x: Float, y: Float): Boolean = instance?.tap(x, y) ?: false
+
+        /**
+         * Bounds of the current Picture-in-Picture window in screen pixels, or null when there is
+         * none or the service is off. Used to anchor a car drag on the floating window.
+         */
+        fun pictureInPictureBounds(): Rect? = instance?.pictureInPictureBounds()
 
         /**
          * Injects a swipe between two phone pixels, calling [onComplete] when it finishes or is

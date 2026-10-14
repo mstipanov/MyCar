@@ -3,6 +3,12 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.33-beta17
+- Fix the pan direction: dragging now moves the mirror the same way your finger does, instead of the opposite way
+
+## 1.33-beta16
+- Fixed drag-to-scroll from the car screen: a pan no longer jumps, drifts or lands as a stray tap, and a drag no longer overshoots when you let go
+
 ## 1.33-beta15
 - Fix announcement pausing only working for the first alert: the paused state is now recomputed on every audio change (a media player with no media session) instead of a latch that could get stuck
 

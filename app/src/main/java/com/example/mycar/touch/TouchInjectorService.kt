@@ -159,14 +159,28 @@ class TouchInjectorService : AccessibilityService() {
         return dispatch(GestureDescription.StrokeDescription(path, 0L, TAP_DURATION_MS))
     }
 
-    private fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long): Boolean {
+    private fun swipe(
+        x1: Float,
+        y1: Float,
+        x2: Float,
+        y2: Float,
+        durationMs: Long,
+        onComplete: (() -> Unit)?,
+    ): Boolean {
         val path = Path().apply {
             moveTo(x1, y1)
             lineTo(x2, y2)
         }
-        return dispatch(
-            GestureDescription.StrokeDescription(path, 0L, durationMs.coerceIn(10L, 2_000L)),
-        )
+        val stroke = GestureDescription.StrokeDescription(path, 0L, durationMs.coerceIn(10L, 2_000L))
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+        if (onComplete == null) return dispatchGesture(gesture, null, null)
+        // Report on both outcomes: the caller serializes pans off this callback, so a cancelled
+        // gesture must release it too rather than stalling the next pan forever.
+        val callback = object : GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) = onComplete()
+            override fun onCancelled(gestureDescription: GestureDescription?) = onComplete()
+        }
+        return dispatchGesture(gesture, callback, null)
     }
 
     /**
@@ -222,9 +236,19 @@ class TouchInjectorService : AccessibilityService() {
         /** Injects a tap at the given phone pixel. Returns false if the service is not enabled. */
         fun tap(x: Float, y: Float): Boolean = instance?.tap(x, y) ?: false
 
-        /** Injects a swipe between two phone pixels. Returns false if not enabled. */
-        fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long): Boolean =
-            instance?.swipe(x1, y1, x2, y2, durationMs) ?: false
+        /**
+         * Injects a swipe between two phone pixels, calling [onComplete] when it finishes or is
+         * cancelled. Returns false when the service is off — in which case [onComplete] is never
+         * called, so callers must not rely on it to make progress.
+         */
+        fun swipe(
+            x1: Float,
+            y1: Float,
+            x2: Float,
+            y2: Float,
+            durationMs: Long,
+            onComplete: (() -> Unit)? = null,
+        ): Boolean = instance?.swipe(x1, y1, x2, y2, durationMs, onComplete) ?: false
 
         /** Injects a two-finger pinch centred on a phone pixel. Returns false if not enabled. */
         fun pinch(x: Float, y: Float, scaleFactor: Float): Boolean =

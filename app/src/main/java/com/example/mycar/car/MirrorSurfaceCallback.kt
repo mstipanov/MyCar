@@ -174,6 +174,9 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         if (!Settings.touchControl(context)) return
         val picture = FrameStore.pictureSize() ?: return
         val scale = pictureScale() ?: return
+        // A floating (Picture-in-Picture) window wins: the car gives no touch-down point, so a drag
+        // would otherwise land on the centre and move whatever is behind the window.
+        val floating = floatingAnchor()
         val step = pan.onScroll(
             distanceX = PAN_SIGN * distanceX,
             distanceY = PAN_SIGN * distanceY,
@@ -181,6 +184,8 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             pictureWidth = picture.x,
             pictureHeight = picture.y,
             now = SystemClock.uptimeMillis(),
+            anchorX = floating?.x,
+            anchorY = floating?.y,
         )
         injectPan(step)
     }
@@ -225,6 +230,18 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             pan.onFling(SystemClock.uptimeMillis())
             pan.onGestureComplete()
         }
+    }
+
+    /**
+     * Centre of the floating Picture-in-Picture window in phone pixels, or null when there is none.
+     * The capture is at the real display size, so the window's screen bounds are also its bounds in
+     * the mirrored picture. When this is non-null, panning anchors here so a drag grabs the window
+     * rather than the app behind it.
+     */
+    private fun floatingAnchor(): PointF? {
+        val bounds = TouchInjectorService.pictureInPictureBounds() ?: return null
+        if (bounds.isEmpty) return null
+        return PointF(bounds.exactCenterX(), bounds.exactCenterY())
     }
 
     /** Scale currently applied (surface pixels per captured phone pixel). */

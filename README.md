@@ -151,8 +151,9 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   pinch-to-zoom on the mirror to the phone through the app's accessibility service. Sideloaded
   apps need *Allow restricted settings* (Settings → Apps → MyCar → ⋮) before they can be switched
   on in Accessibility. Taps and pinches land exactly where you touch; a pan has no touch-down
-  position from the car, so it rides a virtual finger and is best-effort (see
-  [Caveats](#caveats)).
+  position from the car, so it rides a virtual finger and is best-effort. While a floating
+  Picture-in-Picture window (YouTube, Maps, …) is on screen, a drag is anchored to that window so
+  it moves the window rather than the app behind it (see [Caveats](#caveats)).
 * **Start automatically when Android Auto connects** — the mirror appears without touching the
   phone, and mirroring stops by itself once Android Auto disconnects. See
   [Hands-free start](#hands-free-start).
@@ -250,6 +251,11 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
   sitting under your actual finger. MyCar injects one short swipe per step, each starting from
   that anchor and finishing before the next begins, which scrolls reliably but can still act on
   the wrong element if the anchor is not over what you meant to move.
+* **A floating PiP window takes the drags.** While a Picture-in-Picture window is on screen, MyCar
+  reads its bounds (through the accessibility service) and starts each drag inside it, so you can
+  move the window from the car. The car never says where your finger touched, so there is no way
+  to tell a drag meant for the window from one meant for the app behind it: for as long as the
+  window is up, **all** pans go to the window. Pause or dismiss it to pan the app underneath.
 
 ## Where to tweak
 
@@ -261,8 +267,8 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 * Capture resolution — `realDisplaySize()` in `capture/ScreenMirrorService.kt`. Capping the
   long edge here is the cheapest way to cut CPU and memory if the mirror stutters.
 * Pan direction and feel — `PAN_SIGN` in `car/MirrorSurfaceCallback.kt` (flip it if panning comes
-  out mirrored on your car). Step size, swipe duration, the idle reset and the anchor inset are in
-  `touch/PanController.kt`.
+  out mirrored on your car). Step size, swipe duration, the idle reset, the anchor inset and the
+  larger step used to grab a PiP window are in `touch/PanController.kt`.
 
 ## Troubleshooting
 

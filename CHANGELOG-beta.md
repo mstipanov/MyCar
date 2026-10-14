@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.35-beta1
+- Dragging on the car screen now moves a floating Picture-in-Picture window (like YouTube's) instead of the app behind it
+
 ## 1.33-beta17
 - Fix the pan direction: dragging now moves the mirror the same way your finger does, instead of the opposite way
 

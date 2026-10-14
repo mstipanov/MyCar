@@ -118,4 +118,42 @@ class PanControllerTest {
         assertNull(pan.onScroll(100f, 0f, 1f, 0, height, 1_000L))
         assertNull(pan.onScroll(100f, 0f, 1f, width, 0, 1_000L))
     }
+
+    @Test
+    fun `a supplied anchor is used as-is, without the edge inset`() {
+        val pan = PanController()
+
+        // 50 px would be pushed to the 80 px inset if it came from a tap; a floating window's own
+        // centre must be used exactly so the drag actually lands on the window.
+        val step = pan.onScroll(100f, 0f, 1f, width, height, 1_000L, anchorX = 50f, anchorY = 50f)
+
+        assertNotNull(step)
+        assertEquals(50f, step!!.startX, 0.01f)
+        assertEquals(50f, step.startY, 0.01f)
+        assertEquals(150f, step.endX, 0.01f)
+    }
+
+    @Test
+    fun `a floating anchor wins over the last tap`() {
+        val pan = PanController()
+        pan.onTap(200f, 300f)
+
+        val step = pan.onScroll(100f, 0f, 1f, width, height, 1_000L, anchorX = 700f, anchorY = 700f)
+
+        assertNotNull(step)
+        assertEquals(700f, step!!.startX, 0.01f)
+        assertEquals(700f, step.startY, 0.01f)
+    }
+
+    @Test
+    fun `a floating anchor needs a bigger step to clear the window's slop`() {
+        val pan = PanController()
+
+        // 30 px clears the normal 24 px step, but not a floating window's 48 px.
+        assertNull(pan.onScroll(30f, 0f, 1f, width, height, 1_000L, anchorX = centre, anchorY = centre))
+        val step = pan.onScroll(20f, 0f, 1f, width, height, 1_010L, anchorX = centre, anchorY = centre)
+        assertNotNull(step)
+        assertEquals(centre, step!!.startX, 0.01f)
+        assertEquals(centre + 50f, step.endX, 0.01f)
+    }
 }

@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.35
+- Dragging on the car touchscreen now moves a floating Picture-in-Picture window (like YouTube's) instead of the app behind it
+
 ## 1.34
 - Fixed drag-to-scroll from the car touchscreen: a pan no longer jumps, drifts or lands as a stray tap, and a drag no longer overshoots when you let go
 - Dragging now moves the mirror the same way your finger does, instead of the opposite way

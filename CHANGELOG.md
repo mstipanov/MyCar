@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.36
+- The mirror now fills the whole car screen, edge to edge, so the black frame that used to surround it is gone
+
 ## 1.35
 - Dragging on the car touchscreen now moves a floating Picture-in-Picture window (like YouTube's) instead of the app behind it
 

@@ -246,8 +246,10 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 * **Taps and pinches are exact; pans are approximate.** With *Control the phone from the car
   touchscreen* on, a tap is injected where you tapped and a pinch is centred where you pinched —
   the Car App Library supplies both coordinates. A pan does not: it reports only movement deltas,
-  so the drag is applied to a virtual finger (screen centre, re-anchored by your last tap) rather
-  than under your actual finger. It works for scrolling, but can act on the wrong element.
+  so the drag rides a virtual finger (the screen centre, or where you last tapped) rather than
+  sitting under your actual finger. MyCar injects one short swipe per step, each starting from
+  that anchor and finishing before the next begins, which scrolls reliably but can still act on
+  the wrong element if the anchor is not over what you meant to move.
 
 ## Where to tweak
 
@@ -258,8 +260,9 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
   also rotate it.
 * Capture resolution — `realDisplaySize()` in `capture/ScreenMirrorService.kt`. Capping the
   long edge here is the cheapest way to cut CPU and memory if the mirror stutters.
-* Pan direction and feel — `PAN_SIGN`, `PAN_DISPATCH_MS`, `PAN_DURATION_MS` and `FLING_SECONDS` in
-  `car/MirrorSurfaceCallback.kt`. If panning comes out mirrored on your car, flip `PAN_SIGN`.
+* Pan direction and feel — `PAN_SIGN` in `car/MirrorSurfaceCallback.kt` (flip it if panning comes
+  out mirrored on your car). Step size, swipe duration, the idle reset and the anchor inset are in
+  `touch/PanController.kt`.
 
 ## Troubleshooting
 

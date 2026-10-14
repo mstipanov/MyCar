@@ -22,13 +22,15 @@ import com.example.mycar.ScaleMode
 import com.example.mycar.Settings
 import com.example.mycar.capture.FrameStore
 import com.example.mycar.launch.QuickLaunch
+import com.example.mycar.touch.PanController
+import com.example.mycar.touch.PanStep
 import com.example.mycar.touch.TouchInjectorService
 
 /**
  * Paints captured phone frames onto the Surface that Android Auto hands to navigation apps
  * for map drawing, and forwards gestures on that surface back to the phone: taps, pans and
  * pinch-to-zoom. The host exposes no touch-down position, so pans ride a virtual finger (see
- * [cursor]); only taps and pinch focal points arrive with real coordinates.
+ * [PanController]); only taps and pinch focal points arrive with real coordinates.
  *
  * The host only gives us that Surface because this app declares the NAVIGATION category and
  * ACCESS_SURFACE. Nothing here is a map: the "map layer" is just an image, which is the whole
@@ -76,15 +78,11 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     }
 
     /**
-     * Where a drag would land on the phone, in captured pixels. The car never tells us where a
-     * drag began (only per-event deltas), so panning moves this "virtual finger" instead. It is
-     * re-anchored by every tap and reset to the screen centre after a pause between drags.
+     * Turns the car's pan stream into injectable drags. The car never tells us where a drag began
+     * (only per-event deltas), so panning rides a virtual finger that [PanController] keeps on the
+     * last tap point (or the screen centre) and never lets drift.
      */
-    private var cursor: PointF? = null
-    private var pendingDx = 0f
-    private var pendingDy = 0f
-    private var lastPanAt = 0L
-    private val resetCursor = Runnable { cursor = null }
+    private val pan = PanController()
 
     private val tick = object : Runnable {
         override fun run() {
@@ -132,7 +130,7 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
      * A tap on the car screen. A tap on the quick launch strip opens that app on the phone;
      * everything else is forwarded to the phone through the same letterbox transform [drawFrame]
      * uses, so tapping a button in the mirror presses the same button on the phone. A forwarded
-     * tap also re-anchors the drag cursor.
+     * tap also re-anchors the next drag to where the user touched.
      */
     override fun onClick(x: Float, y: Float) {
         val surfaceContainer = container
@@ -158,7 +156,7 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             Log.d(TAG, "tap at $x,$y is outside the mirrored picture")
             return
         }
-        cursor = point
+        pan.onTap(point.x, point.y)
         Log.d(TAG, "tap $x,$y -> phone ${point.x},${point.y}")
         if (!TouchInjectorService.tap(point.x, point.y)) {
             Log.w(TAG, "tap not injected: accessibility service is not enabled")
@@ -166,40 +164,39 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     }
 
     /**
-     * A pan on the car screen. The host only reports deltas, so the movement is applied to the
-     * virtual [cursor] and injected as a short drag. Steps are batched to about one dispatch per
-     * frame; see [PAN_SIGN] if the direction turns out inverted on a given car.
+     * A pan on the car screen. The host only reports deltas, so the movement is accumulated and
+     * injected as short drags from a fixed anchor (the last tap, or the screen centre) — see
+     * [PanController]. Swipes are serialized: the next is only injected once the previous one
+     * finished, so none is cancelled mid-move. See [PAN_SIGN] if the direction is inverted on a
+     * given car.
      */
     override fun onScroll(distanceX: Float, distanceY: Float) {
         if (!Settings.touchControl(context)) return
+        val picture = FrameStore.pictureSize() ?: return
         val scale = pictureScale() ?: return
-        pendingDx += PAN_SIGN * distanceX / scale
-        pendingDy += PAN_SIGN * distanceY / scale
-        if (SystemClock.uptimeMillis() - lastPanAt < PAN_DISPATCH_MS) return
-        dispatchPan()
+        val step = pan.onScroll(
+            distanceX = PAN_SIGN * distanceX,
+            distanceY = PAN_SIGN * distanceY,
+            scale = scale,
+            pictureWidth = picture.x,
+            pictureHeight = picture.y,
+            now = SystemClock.uptimeMillis(),
+        )
+        injectPan(step)
     }
 
     /**
-     * A fling on the car screen. Best effort: the scroll stream already moved the cursor, so this
-     * just carries it a little further in the direction of travel.
+     * A fling on the car screen. The scroll stream already moved the mirror, so this only ends the
+     * drag — adding another swipe here is what used to make a drag finish with an overshoot.
      */
     override fun onFling(velocityX: Float, velocityY: Float) {
-        if (!Settings.touchControl(context)) return
-        dispatchPan()
-        val picture = FrameStore.pictureSize() ?: return
-        val scale = pictureScale() ?: return
-        val start = cursor ?: PointF(picture.x / 2f, picture.y / 2f)
-        val dx = PAN_SIGN * velocityX / scale * FLING_SECONDS
-        val dy = PAN_SIGN * velocityY / scale * FLING_SECONDS
-        val end = clamp(start, dx, dy, picture)
-        cursor = end
-        scheduleCursorReset()
-        TouchInjectorService.swipe(start.x, start.y, end.x, end.y, FLING_DURATION_MS)
+        pan.onFling(SystemClock.uptimeMillis())
     }
 
     /**
      * A pinch on the car screen. Unlike a pan, the host supplies the focal point, so this maps
-     * cleanly onto the phone and injects a real two-finger pinch.
+     * cleanly onto the phone and injects a real two-finger pinch. Pinching also re-anchors the next
+     * drag to the pinch point.
      */
     override fun onScale(focusX: Float, focusY: Float, scaleFactor: Float) {
         if (!Settings.touchControl(context)) return
@@ -207,39 +204,27 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val picture = FrameStore.pictureSize() ?: return
         val focus = if (focusX >= 0f && focusY >= 0f) mapToPhone(focusX, focusY) else null
         val point = focus ?: PointF(picture.x / 2f, picture.y / 2f)
+        pan.onTap(point.x, point.y)
         if (!TouchInjectorService.pinch(point.x, point.y, scaleFactor)) {
             Log.w(TAG, "pinch not injected: accessibility service is not enabled")
         }
     }
 
-    /** Applies any accumulated pan as one drag step and moves the virtual finger. */
-    private fun dispatchPan() {
-        val picture = FrameStore.pictureSize() ?: return
-        if (pendingDx == 0f && pendingDy == 0f) return
-        val dx = pendingDx
-        val dy = pendingDy
-        pendingDx = 0f
-        pendingDy = 0f
-        val start = cursor ?: PointF(picture.x / 2f, picture.y / 2f)
-        val end = clamp(start, dx, dy, picture)
-        cursor = end
-        lastPanAt = SystemClock.uptimeMillis()
-        scheduleCursorReset()
-        if (!TouchInjectorService.swipe(start.x, start.y, end.x, end.y, PAN_DURATION_MS)) {
-            Log.w(TAG, "pan not injected: accessibility service is not enabled")
+    /** Injects one accumulated pan step, then the next one (if any) once it has finished. */
+    private fun injectPan(step: PanStep?) {
+        if (step == null) return
+        val injected = TouchInjectorService.swipe(
+            step.startX, step.startY, step.endX, step.endY, step.durationMs,
+        ) {
+            injectPan(pan.onGestureComplete())
         }
-    }
-
-    private fun clamp(start: PointF, dx: Float, dy: Float, picture: android.graphics.Point): PointF =
-        PointF(
-            (start.x + dx).coerceIn(0f, picture.x.toFloat()),
-            (start.y + dy).coerceIn(0f, picture.y.toFloat()),
-        )
-
-    /** After a drag finishes, the next one starts fresh from the centre. */
-    private fun scheduleCursorReset() {
-        handler.removeCallbacks(resetCursor)
-        handler.postDelayed(resetCursor, PAN_RESET_MS)
+        if (!injected) {
+            Log.w(TAG, "pan not injected: accessibility service is not enabled")
+            // The completion callback will never run, so release the controller here or panning
+            // deadlocks on the in-flight flag. Drop the pending movement with it.
+            pan.onFling(SystemClock.uptimeMillis())
+            pan.onGestureComplete()
+        }
     }
 
     /** Scale currently applied (surface pixels per captured phone pixel). */
@@ -541,21 +526,13 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         const val FRAME_INTERVAL_MS = 33L
 
         /**
-         * Pan direction. The host only reports "distance scrolled", whose sign is ambiguous; flip
-         * to -1f if panning comes out inverted on the car.
+         * Pan direction. The host reports "distance scrolled" with the opposite sign to the finger
+         * movement we need to inject on the tested car; use 1f if panning comes out inverted on
+         * another.
          */
-        const val PAN_SIGN = 1f
+        const val PAN_SIGN = -1f
 
-        /** Batch pan deltas to at most one injected drag per this interval. */
-        const val PAN_DISPATCH_MS = 40L
-        const val PAN_DURATION_MS = 60L
-
-        /** Quiet time after a drag before the virtual finger snaps back to the centre. */
-        const val PAN_RESET_MS = 250L
-
-        /** How much of a fling's velocity to carry into the injected drag. */
-        const val FLING_SECONDS = 0.15f
-        const val FLING_DURATION_MS = 120L
+        // Pan step timing, step size and anchor inset live in touch/PanController.
 
         // region quick launch strip
         /** Strip thickness in dp: its width on the right, or its height along the bottom. */

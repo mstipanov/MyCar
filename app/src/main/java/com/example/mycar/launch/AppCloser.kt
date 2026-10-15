@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.PowerManager
 import android.util.Log
 import com.example.mycar.Settings
+import com.example.mycar.audio.MediaControlService
 import com.example.mycar.touch.TouchInjectorService
 
 /**
@@ -22,6 +23,11 @@ import com.example.mycar.touch.TouchInjectorService
  * - Hard (opt-in): let the accessibility service drive the app-info screen's "Force stop", which
  *   really stops the process (media and background work included). This needs the phone awake and
  *   unlocked; when it is not, or the service is off, it falls back to the soft path.
+ *
+ * Radarbot is a special case: it keeps a notification up while it runs whose action stops it, so
+ * MyCar sends that action instead (see [MediaControlService.stopAppViaNotification]). That stops it
+ * cleanly with no Settings screen to open — and therefore none to be left behind — and without
+ * needing the phone awake or unlocked. The paths above remain the fallback.
  */
 object AppCloser {
 
@@ -36,12 +42,26 @@ object AppCloser {
     }
 
     private fun close(context: Context, packageName: String, hard: Boolean) {
+        // Radarbot is stopped through its own notification's action, which avoids the Settings
+        // app-info screen entirely; only fall back to the hard/soft close when it has no such
+        // action (Notification access off, or Radarbot not showing its running notification).
+        if (isRadarbot(packageName) && MediaControlService.stopAppViaNotification(packageName)) {
+            Log.i(TAG, "stopped $packageName via its notification")
+            return
+        }
         if (hard && canDriveUi(context) && TouchInjectorService.forceStop(packageName)) {
             Log.i(TAG, "force stopping $packageName")
             return
         }
         softClose(context, packageName)
     }
+
+    /**
+     * Whether [packageName] is Radarbot. Both its Free and GOLD builds use a "radarbot" package id
+     * (`com.vialsoft.radarbot`, `com.vialsoft.radarbot_free`), so match by name.
+     */
+    private fun isRadarbot(packageName: String): Boolean =
+        packageName.contains("radarbot", ignoreCase = true)
 
     /** Reaps the app's background process where allowed, and leaves it when it is on screen. */
     private fun softClose(context: Context, packageName: String) {

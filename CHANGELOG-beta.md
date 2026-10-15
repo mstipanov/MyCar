@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.37-beta1
+- "Close an app when Android Auto disconnects" now stops Radarbot through the *stop* action on its own notification instead of force-stopping it, so Android's app-info Settings screen no longer opens (and can no longer be left behind). Needs Notification access; other apps are unchanged
+
 ## 1.36-beta1
 - The mirror now fills the whole car screen edge to edge, the way native Android Auto apps do: the black frame that used to surround it (the host insets its map area for its own bars) is gone
 

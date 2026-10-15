@@ -166,7 +166,9 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   disconnects. By default it reaps the app's background process (Android 13 and below) and, when
   the app is the one on screen, leaves it through the accessibility service. Tick *Force stop it*
   to really stop the app — media and background work included — by driving the app-info screen's
-  *Force stop*, which needs the phone awake and unlocked. See
+  *Force stop*, which needs the phone awake and unlocked. Radarbot is special-cased: MyCar sends
+  the *stop* action on its own running notification, which stops it cleanly with no Settings screen
+  to open — and so none to leave behind — and without needing the phone awake. See
   [Hands-free start](#hands-free-start).
 * **Pause media during announcements** — pauses whatever is playing (YouTube, music) while a
   navigation or alert app speaks, then resumes it. It matches the announcement by audio usage or

@@ -31,7 +31,7 @@
     <string name="start_apps_count">Open when mirroring starts: %1$d</string>
     <string name="start_app_search">Search apps</string>
     <string name="close_app">Close an app when Android Auto disconnects</string>
-    <string name="close_app_hint">Needs the accessibility service; without it, only the app\'s background process can be cleared (Android 13 and below).</string>
+    <string name="close_app_hint">Needs the accessibility service; without it, only the app\'s background process can be cleared (Android 13 and below). Radarbot is stopped through its own notification instead, so no Settings screen opens.</string>
     <string name="close_app_pick">Choose app to close</string>
     <string name="close_app_pick_title">Close when Android Auto disconnects</string>
     <string name="close_app_selected">Close on disconnect: %1$s</string>

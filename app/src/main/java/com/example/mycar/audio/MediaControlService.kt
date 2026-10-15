@@ -105,6 +105,31 @@ class MediaControlService : NotificationListenerService() {
     private fun activeSessions(): List<MediaController> =
         runCatching { mediaSessionManager()?.getActiveSessions(componentName()) }.getOrNull().orEmpty()
 
+    /**
+     * Sends a "stop" action posted by [packageName]'s own notification, if it has one. Radarbot
+     * keeps a notification up while it runs whose action stops it; sending that PendingIntent
+     * stops the app cleanly — with no Settings app-info screen to drive (so none can be left open)
+     * and no need for the phone to be awake and unlocked. False when the app has no live
+     * notification, none of its actions looks like a stop, or the send fails.
+     */
+    private fun stopViaNotification(packageName: String): Boolean {
+        val action = activeNotifications.orEmpty()
+            .filter { it.packageName == packageName }
+            .flatMap { it.notification.actions.orEmpty().asList() }
+            .firstOrNull { it.actionIntent != null && it.title.looksLikeStop() }
+            ?: return false
+        return runCatching {
+            action.actionIntent.send()
+            Log.i(TAG, "sent \"${action.title}\" to $packageName")
+        }.isSuccess
+    }
+
+    /** Whether an action's title reads as "stop the app". Radarbot localises its, so match a few. */
+    private fun CharSequence?.looksLikeStop(): Boolean {
+        val title = this?.toString()?.lowercase() ?: return false
+        return STOP_ACTION_WORDS.any { title.contains(it) }
+    }
+
     /** Number of media sessions currently playing, excluding MyCar. */
     private fun countPlayingSessions(): Int =
         (controllers + activeSessions())
@@ -144,6 +169,15 @@ class MediaControlService : NotificationListenerService() {
         private const val TAG = "MediaControl"
         private const val RESUME_FALLBACK_MS = 1_000L
 
+        /**
+         * Action titles that mean "stop the app". Radarbot shows a "stop navigation" action on its
+         * notification and localises it, so match the common English and Croatian wording.
+         */
+        private val STOP_ACTION_WORDS = listOf(
+            "stop", "exit", "end", "quit", "finish", "close", "turn off", "dismiss",
+            "zaustavi", "izlaz", "zavr", "zatvori", "prekini", "ugasi", "isklju",
+        )
+
         @Volatile
         private var instance: MediaControlService? = null
 
@@ -154,6 +188,13 @@ class MediaControlService : NotificationListenerService() {
         fun playingSessionCount(): Int = instance?.countPlayingSessions() ?: 0
 
         fun pausePlayingMedia(): Boolean = instance?.pauseMedia() == true
+
+        /**
+         * Sends a "stop" action from one of [packageName]'s notifications, if it has one (see
+         * [stopViaNotification]). False when Notification access is off or there is no such action.
+         */
+        fun stopAppViaNotification(packageName: String): Boolean =
+            instance?.stopViaNotification(packageName) == true
 
         fun resumePausedMedia() {
             instance?.resumeMedia()

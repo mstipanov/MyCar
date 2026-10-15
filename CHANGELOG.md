@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.37
+- "Close an app when Android Auto disconnects" now stops Radarbot through the stop action on its own notification instead of force-stopping it, so no Settings screen opens (and none can be left behind); needs notification access, and other apps are unchanged
+
 ## 1.36
 - The mirror now fills the whole car screen, edge to edge, so the black frame that used to surround it is gone
 

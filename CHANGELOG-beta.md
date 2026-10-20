@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.38-beta1
+- Dragging on the car screen now only moves the floating Picture-in-Picture window (like YouTube's) when the drag starts on the window itself; anywhere else it scrolls the app you tapped, so a floating window no longer takes every drag
+
 ## 1.37-beta1
 - "Close an app when Android Auto disconnects" now stops Radarbot through the *stop* action on its own notification instead of force-stopping it, so Android's app-info Settings screen no longer opens (and can no longer be left behind). Needs Notification access; other apps are unchanged
 

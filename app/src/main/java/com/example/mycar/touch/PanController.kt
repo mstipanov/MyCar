@@ -108,6 +108,13 @@ class PanController(
         return nextStep()
     }
 
+    /**
+     * Whether a pan arriving at [now] begins a fresh drag rather than continuing a paused one.
+     * Callers use this to latch per-drag decisions (such as which window the drag is aimed at) to
+     * exactly the same drag boundaries the controller itself uses.
+     */
+    fun startsNewDrag(now: Long): Boolean = now - lastActivityAt > idleResetMs
+
     /** The injected swipe finished; hand out the next accumulated step, if any. */
     fun onGestureComplete(): PanStep? {
         inFlight = false

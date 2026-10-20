@@ -1,8 +1,10 @@
 package com.example.mycar.touch
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -143,6 +145,20 @@ class PanControllerTest {
         assertNotNull(step)
         assertEquals(700f, step!!.startX, 0.01f)
         assertEquals(700f, step.startY, 0.01f)
+    }
+
+    @Test
+    fun `a new drag is told apart from a pause inside one`() {
+        val pan = PanController()
+        pan.onScroll(100f, 0f, 1f, width, height, 1_000L)
+
+        // A short gap is still the same drag; a longer one starts a fresh drag.
+        assertFalse(pan.startsNewDrag(1_100L))
+        assertTrue(pan.startsNewDrag(1_500L))
+
+        pan.onFling(1_600L)
+        assertFalse(pan.startsNewDrag(1_700L))
+        assertTrue(pan.startsNewDrag(2_100L))
     }
 
     @Test

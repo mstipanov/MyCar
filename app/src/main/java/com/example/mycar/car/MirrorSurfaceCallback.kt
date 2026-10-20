@@ -87,6 +87,17 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
      */
     private val pan = PanController()
 
+    /** Where the user's last tap or pinch focus landed on the phone, in phone pixels. */
+    private var lastTap: PointF? = null
+
+    /**
+     * Whether the drag in progress is grabbing the floating Picture-in-Picture window rather than
+     * the app behind it. Decided once when the drag starts — the last tap landed on the window —
+     * and held for the whole drag, because the window moves out from under that tap point as it is
+     * dragged, and a drag that re-decided each batch would drop it half-way.
+     */
+    private var draggingFloating = false
+
     private val tick = object : Runnable {
         override fun run() {
             drawFrame()
@@ -160,6 +171,7 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             return
         }
         pan.onTap(point.x, point.y)
+        lastTap = point
         Log.d(TAG, "tap $x,$y -> phone ${point.x},${point.y}")
         if (!TouchInjectorService.tap(point.x, point.y)) {
             Log.w(TAG, "tap not injected: accessibility service is not enabled")
@@ -169,26 +181,30 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     /**
      * A pan on the car screen. The host only reports deltas, so the movement is accumulated and
      * injected as short drags from a fixed anchor (the last tap, or the screen centre) — see
-     * [PanController]. Swipes are serialized: the next is only injected once the previous one
-     * finished, so none is cancelled mid-move. See [PAN_SIGN] if the direction is inverted on a
-     * given car.
+     * [PanController]. A drag started on a floating Picture-in-Picture window grabs that window
+     * instead of the app behind it; a drag started anywhere else leaves the window alone. Swipes
+     * are serialized: the next is only injected once the previous one finished, so none is
+     * cancelled mid-move. See [PAN_SIGN] if the direction is inverted on a given car.
      */
     override fun onScroll(distanceX: Float, distanceY: Float) {
         if (!Settings.touchControl(context)) return
         val picture = FrameStore.pictureSize() ?: return
         val scale = pictureScale() ?: return
-        // A floating (Picture-in-Picture) window wins: the car gives no touch-down point, so a drag
-        // would otherwise land on the centre and move whatever is behind the window.
-        val floating = floatingAnchor()
+        val now = SystemClock.uptimeMillis()
+        // The car gives no touch-down point, so the last tap is what tells a grab of the floating
+        // window apart from a scroll of the app behind it. Latched for the whole drag below.
+        if (pan.startsNewDrag(now)) draggingFloating = false
+        if (!draggingFloating) draggingFloating = lastTapOnFloating()
+        val anchor = if (draggingFloating) floatingCentre() else null
         val step = pan.onScroll(
             distanceX = PAN_SIGN * distanceX,
             distanceY = PAN_SIGN * distanceY,
             scale = scale,
             pictureWidth = picture.x,
             pictureHeight = picture.y,
-            now = SystemClock.uptimeMillis(),
-            anchorX = floating?.x,
-            anchorY = floating?.y,
+            now = now,
+            anchorX = anchor?.x,
+            anchorY = anchor?.y,
         )
         injectPan(step)
     }
@@ -199,6 +215,7 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
      */
     override fun onFling(velocityX: Float, velocityY: Float) {
         pan.onFling(SystemClock.uptimeMillis())
+        draggingFloating = false
     }
 
     /**
@@ -213,6 +230,7 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         val focus = if (focusX >= 0f && focusY >= 0f) mapToPhone(focusX, focusY) else null
         val point = focus ?: PointF(picture.x / 2f, picture.y / 2f)
         pan.onTap(point.x, point.y)
+        lastTap = point
         if (!TouchInjectorService.pinch(point.x, point.y, scaleFactor)) {
             Log.w(TAG, "pinch not injected: accessibility service is not enabled")
         }
@@ -236,15 +254,27 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     }
 
     /**
-     * Centre of the floating Picture-in-Picture window in phone pixels, or null when there is none.
+     * Bounds of the floating Picture-in-Picture window in phone pixels, or null when there is none.
      * The capture is at the real display size, so the window's screen bounds are also its bounds in
-     * the mirrored picture. When this is non-null, panning anchors here so a drag grabs the window
-     * rather than the app behind it.
+     * the mirrored picture.
      */
-    private fun floatingAnchor(): PointF? {
-        val bounds = TouchInjectorService.pictureInPictureBounds() ?: return null
-        if (bounds.isEmpty) return null
-        return PointF(bounds.exactCenterX(), bounds.exactCenterY())
+    private fun floatingBounds(): Rect? =
+        TouchInjectorService.pictureInPictureBounds()?.takeIf { !it.isEmpty }
+
+    /**
+     * Whether the user's last tap landed on the floating window. Only then does a drag move the
+     * window; anywhere else on the mirror it scrolls the app behind it, even while a window is
+     * floating over that app.
+     */
+    private fun lastTapOnFloating(): Boolean {
+        val bounds = floatingBounds() ?: return false
+        val tap = lastTap ?: return false
+        return bounds.contains(tap.x.toInt(), tap.y.toInt())
+    }
+
+    /** Centre of the floating window in phone pixels, or null when there is none. */
+    private fun floatingCentre(): PointF? = floatingBounds()?.let {
+        PointF(it.exactCenterX(), it.exactCenterY())
     }
 
     /** Scale currently applied (surface pixels per captured phone pixel). */

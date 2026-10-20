@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.38
+- Dragging on the car screen now only moves a floating Picture-in-Picture window (like YouTube's) when the drag starts on the window itself; dragging anywhere else scrolls the app behind it, so a floating window no longer takes every drag
+
 ## 1.37
 - "Close an app when Android Auto disconnects" now stops Radarbot through the stop action on its own notification instead of force-stopping it, so no Settings screen opens (and none can be left behind); needs notification access, and other apps are unchanged
 

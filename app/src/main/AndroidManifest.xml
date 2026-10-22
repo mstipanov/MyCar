@@ -140,13 +140,15 @@
                     android:value="Watches for Android Auto connection changes to start screen mirroring automatically." />
         </service>
 
-        <!-- Brings the watcher back after a reboot. -->
+        <!-- Brings the watcher back after a reboot, and everything that keeps running in the
+             background back after an app update (which kills the process). -->
         <receiver
-                android:name=".auto.BootReceiver"
+                android:name=".auto.RestartReceiver"
                 android:exported="true"
                 android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

@@ -55,9 +55,9 @@ navigation, point-of-interest and weather apps get:
 * `touch/TouchInjectorService` — accessibility service that injects the taps you make on the
   mirror (so the car touchscreen can drive the phone) and presses Share on the system capture
   prompt for hands-free start.
-* `auto/CarConnectionWatcher` / `auto/BootReceiver` — a quiet foreground service that starts
+* `auto/CarConnectionWatcher` / `auto/RestartReceiver` — a quiet foreground service that starts
   mirroring the moment Android Auto connects and stops it when the car disconnects, and comes
-  back after a reboot.
+  back after a reboot or an app update.
 * `Settings.kt` / `RotationLock.kt` — the app's stored options (keep screen on, lock landscape,
   touch control, auto-start) and the system-rotation helper behind the landscape lock.
 

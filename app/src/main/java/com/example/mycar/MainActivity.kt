@@ -334,12 +334,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun syncWatcher() {
         val autoStart = autoStartView.isChecked
-        val close = closeAppView.isChecked
         if (autoStart && !android.provider.Settings.canDrawOverlays(this) && !overlayPrompted) {
             overlayPrompted = true
             requestOverlayPermissionIfNeeded()
         }
-        if (autoStart && android.provider.Settings.canDrawOverlays(this) || close) {
+        if (CarConnectionWatcher.wanted(this)) {
             CarConnectionWatcher.start(this)
         } else {
             CarConnectionWatcher.stop(this)

@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.39-beta1
+- Fixed hands-free features silently switching off after the app updated itself: auto-start, close-on-disconnect and pausing media during announcements now come back by themselves when the new build is installed, instead of waiting for MyCar to be opened or the phone rebooted
+
 ## 1.38-beta1
 - Dragging on the car screen now only moves the floating Picture-in-Picture window (like YouTube's) when the drag starts on the window itself; anywhere else it scrolls the app you tapped, so a floating window no longer takes every drag
 

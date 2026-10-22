@@ -187,6 +187,15 @@ class CarConnectionWatcher : Service() {
         fun isProjecting(context: Context): Boolean =
             connectionState(context) == CONNECTION_PROJECTION
 
+        /**
+         * Whether the watcher should be running: auto-start needs "Display over other apps" for
+         * its background activity start, closing an app on disconnect does not. Shared by the
+         * phone UI and [RestartReceiver] so both re-arm it under the same conditions.
+         */
+        fun wanted(context: Context): Boolean =
+            (Settings.autoStart(context) && android.provider.Settings.canDrawOverlays(context)) ||
+                Settings.closeAppOnDisconnect(context)
+
         /** Idempotently starts the watcher. */
         fun start(context: Context) {
             ContextCompat.startForegroundService(

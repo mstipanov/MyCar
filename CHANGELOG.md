@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.39
+- Fixed hands-free features silently switching off after the app updated itself: auto-start, close-on-disconnect and pausing media during announcements now come back by themselves when the new build is installed, instead of waiting for MyCar to be opened or the phone rebooted
+
 ## 1.38
 - Dragging on the car screen now only moves a floating Picture-in-Picture window (like YouTube's) when the drag starts on the window itself; dragging anywhere else scrolls the app behind it, so a floating window no longer takes every drag
 

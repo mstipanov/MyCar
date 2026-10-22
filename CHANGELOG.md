@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.40
+- When Android Auto disconnects, the MyCar phone screen now steps aside: if it was the screen in front, it goes to the background instead of staying there after the car is gone
+
 ## 1.39
 - Fixed hands-free features silently switching off after the app updated itself: auto-start, close-on-disconnect and pausing media during announcements now come back by themselves when the new build is installed, instead of waiting for MyCar to be opened or the phone rebooted
 

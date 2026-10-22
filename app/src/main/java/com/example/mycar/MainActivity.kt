@@ -37,6 +37,7 @@ import com.example.mycar.update.ApkInstaller
 import com.example.mycar.update.AvailableUpdate
 import com.example.mycar.update.UpdateCheckOutcome
 import com.example.mycar.update.UpdateManager
+import java.lang.ref.WeakReference
 
 /**
  * Phone-side companion screen. This is where Android requires the user to approve screen
@@ -291,6 +292,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // The watcher pushes this screen out of the way when Android Auto disconnects; it only
+        // does so while this is the visible screen, so it knows which one that is.
+        showing = WeakReference(this)
         // The service can be killed by the system or by the user revoking capture, so always
         // reflect its real state rather than assuming.
         if (ScreenMirrorService.isRunning) showRunning() else showIdle()
@@ -325,6 +329,11 @@ class MainActivity : AppCompatActivity() {
         // Keep the manifest's enabled category in sync with the stored choice (an app update
         // resets the components to the manifest defaults, i.e. weather).
         CarCategory.register(this, Settings.carCategory(this))
+    }
+
+    override fun onPause() {
+        showing = null
+        super.onPause()
     }
 
     /**
@@ -766,5 +775,20 @@ class MainActivity : AppCompatActivity() {
     companion object {
         /** Extra set by [CarConnectionWatcher] to request capture as soon as this screen opens. */
         const val EXTRA_AUTO_START = "autoStart"
+
+        /** The instance on screen, if any, so the watcher can move it out of the way on disconnect. */
+        private var showing: WeakReference<MainActivity>? = null
+
+        /**
+         * Sends the phone UI to the background if it is on screen. Called by [CarConnectionWatcher]
+         * when Android Auto disconnects, so MyCar does not linger in front of the user once the
+         * car is gone. A no-op when it is already in the background or was never opened.
+         */
+        fun moveToBackIfShowing() {
+            val activity = showing?.get() ?: return
+            if (activity.isFinishing || activity.isDestroyed) return
+            // Never let this disturb the rest of the disconnect handling (closing the chosen app).
+            runCatching { activity.moveTaskToBack(true) }
+        }
     }
 }

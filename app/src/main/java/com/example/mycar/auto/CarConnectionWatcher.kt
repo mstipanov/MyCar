@@ -109,6 +109,8 @@ class CarConnectionWatcher : Service() {
      */
     private fun onDisconnected() {
         stopMirroring()
+        // The phone UI does not need to stay in front once the car is gone; send it to the back.
+        MainActivity.moveToBackIfShowing()
         closeChosenApp()
     }
 

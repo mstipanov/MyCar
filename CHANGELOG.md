@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.42
+- The Support card's Buy Me a Coffee and PayPal buttons now carry their logos
+
 ## 1.41
 - New Support card in the app with Buy Me a Coffee and PayPal links, so you can back MyCar's development without leaving the app
 

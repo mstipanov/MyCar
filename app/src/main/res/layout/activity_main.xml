@@ -317,11 +317,25 @@
                 <Button
                     android:id="@+id/support_coffee"
                     style="@style/MyCar.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:drawableStart="@drawable/ic_support_coffee"
+                    android:drawablePadding="8dp"
+                    android:drawableTint="@color/button_secondary_text"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp"
                     android:text="@string/support_coffee" />
 
                 <Button
                     android:id="@+id/support_paypal"
                     style="@style/MyCar.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:drawableStart="@drawable/ic_support_paypal"
+                    android:drawablePadding="8dp"
+                    android:drawableTint="@color/button_secondary_text"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp"
                     android:text="@string/support_paypal" />
             </LinearLayout>
 

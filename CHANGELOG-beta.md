@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.42-beta1
+- The Support card's Buy Me a Coffee and PayPal buttons now carry their logos
+
 ## 1.41-beta1
 - New Support card in the app with Buy Me a Coffee and PayPal links, so you can back MyCar's development without leaving the app
 

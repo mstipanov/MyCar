@@ -11,6 +11,13 @@
     <string name="section_audio">Audio</string>
     <string name="section_appearance">Appearance</string>
     <string name="section_updates">Updates</string>
+    <string name="section_support">Support</string>
+
+    <string name="support_hint">MyCar is free, with no ads or tracking. If it makes your drives better, you can buy me a coffee.</string>
+    <string name="support_coffee">Buy me a coffee</string>
+    <string name="support_paypal">PayPal</string>
+    <string name="support_coffee_url" translatable="false">https://buymeacoffee.com/mstipanov</string>
+    <string name="support_paypal_url" translatable="false">https://paypal.me/mstipanov</string>
 
     <string name="theme_system">Match system</string>
     <string name="theme_light">Light</string>

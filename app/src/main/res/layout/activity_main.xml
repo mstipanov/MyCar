@@ -302,6 +302,29 @@
                     android:gravity="center" />
             </LinearLayout>
 
+            <!-- Support: keeps the release notes' Buy Me a Coffee / PayPal links reachable in-app -->
+            <LinearLayout style="@style/MyCar.Card">
+
+                <TextView
+                    style="@style/MyCar.SectionCaption"
+                    android:text="@string/section_support" />
+
+                <TextView
+                    style="@style/MyCar.Hint"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/support_hint" />
+
+                <Button
+                    android:id="@+id/support_coffee"
+                    style="@style/MyCar.Button.Secondary"
+                    android:text="@string/support_coffee" />
+
+                <Button
+                    android:id="@+id/support_paypal"
+                    style="@style/MyCar.Button.Secondary"
+                    android:text="@string/support_paypal" />
+            </LinearLayout>
+
             <TextView
                 style="@style/MyCar.Hint"
                 android:layout_marginTop="16dp"

@@ -2,6 +2,7 @@ package com.example.mycar
 
 import android.Manifest
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionConfig
@@ -281,6 +282,12 @@ class MainActivity : AppCompatActivity() {
             showIdle()
         }
         updateButton.setOnClickListener { checkForUpdates() }
+        findViewById<Button>(R.id.support_coffee).setOnClickListener {
+            openUrl(getString(R.string.support_coffee_url))
+        }
+        findViewById<Button>(R.id.support_paypal).setOnClickListener {
+            openUrl(getString(R.string.support_paypal_url))
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
@@ -406,6 +413,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun openNotificationAccessSettings() {
         startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+
+    /** Opens a web page in whatever browser the phone has; silently does nothing if it has none. */
+    private fun openUrl(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: ActivityNotFoundException) {
+            // No browser installed: nothing sensible to do.
+        }
     }
 
     /** Offers the "Grant notification access" button until the access is actually granted. */

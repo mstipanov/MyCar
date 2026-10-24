@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.41
+- New Support card in the app with Buy Me a Coffee and PayPal links, so you can back MyCar's development without leaving the app
+
 ## 1.40
 - When Android Auto disconnects, the MyCar phone screen now steps aside: if it was the screen in front, it goes to the background instead of staying there after the car is gone
 

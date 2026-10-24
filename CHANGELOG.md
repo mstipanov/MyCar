@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.43
+- Fixed MyCar behaving as if Android Auto had just connected when you unlocked the phone: if Android Auto connected while the phone was locked and then disconnected before the unlock, the waiting start is now dropped instead of asking to start mirroring
+
 ## 1.42
 - The Support card's Buy Me a Coffee and PayPal buttons now carry their logos
 

@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.43-beta1
+- Fixed MyCar behaving as if Android Auto had just connected when the phone was unlocked: if Android Auto connected while the phone was locked and then disconnected before the unlock, the waiting start is now dropped instead of asking to start mirroring
+
 ## 1.42-beta1
 - The Support card's Buy Me a Coffee and PayPal buttons now carry their logos
 

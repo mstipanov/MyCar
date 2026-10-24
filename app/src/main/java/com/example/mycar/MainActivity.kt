@@ -2,6 +2,7 @@ package com.example.mycar
 
 import android.Manifest
 import android.app.Activity
+import android.app.KeyguardManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,6 +11,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -82,6 +84,13 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val data = result.data
             if (result.resultCode == Activity.RESULT_OK && data != null) {
+                // Auto-started capture is only wanted while the car is still there. The consent
+                // prompt can outlive the connection (the phone was locked, or the car left while
+                // it was up), and starting then would mirror into nothing.
+                if (launchedForAutoStart && !CarConnectionWatcher.isProjecting(this)) {
+                    finish()
+                    return@registerForActivityResult
+                }
                 ScreenMirrorService.start(this, result.resultCode, data)
                 showRunning()
                 // Launched from the watcher: get out of the way once capture is running.
@@ -364,16 +373,39 @@ class MainActivity : AppCompatActivity() {
     /**
      * When Android Auto brought us up, ask for capture immediately. Done once per activity so a
      * declined prompt never loops.
+     *
+     * The launch can outlive the connection: while the phone is locked, the activity only reaches
+     * the user after they unlock, which may be long after leaving the car. So the request is
+     * honoured only while Android Auto still projects, and the extra is consumed either way.
      */
     private fun maybeAutoStart() {
         if (launchedForAutoStart) return
         if (!intent.getBooleanExtra(EXTRA_AUTO_START, false)) return
+        if (!CarConnectionWatcher.isProjecting(this)) {
+            // A launch that waited behind the keyguard until after the car left.
+            intent.removeExtra(EXTRA_AUTO_START)
+            if (!ScreenMirrorService.isRunning) finish()
+            return
+        }
+        // Asking while locked would only park the consent prompt behind the keyguard; onResume
+        // runs again when the user unlocks, so wait for that.
+        if (!readyForConsent()) return
         launchedForAutoStart = true
+        intent.removeExtra(EXTRA_AUTO_START)
         if (ScreenMirrorService.isRunning) {
             finish()
         } else {
             requestProjection()
         }
+    }
+
+    /** Whether the capture consent prompt could actually be shown and answered right now. */
+    private fun readyForConsent(): Boolean {
+        val power = getSystemService(PowerManager::class.java)
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        val interactive = power?.isInteractive ?: true
+        val locked = keyguard?.isKeyguardLocked ?: false
+        return interactive && !locked
     }
 
     /**

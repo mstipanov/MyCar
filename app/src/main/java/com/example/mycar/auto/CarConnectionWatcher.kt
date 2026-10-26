@@ -12,7 +12,9 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -48,9 +50,28 @@ class CarConnectionWatcher : Service() {
 
     /**
      * Android Auto connected while the phone was locked or asleep, so the launch waits for the
-     * user to unlock it. Cleared once the launch happens or the car goes away.
+     * user to unlock it. Cleared once a launched screen reports in (see [markAutoStartDelivered])
+     * or the car goes away.
      */
     private var startPending = false
+    /** How many times the launch is tried before giving up on this connection. */
+    private var startAttemptsLeft = 0
+
+    private val handler = Handler(Looper.getMainLooper())
+
+    /**
+     * Keeps trying while [startPending] is set. The unlock broadcasts are the fast path, but they
+     * are not guaranteed (a locked phone may not deliver them, the keyguard can still count as
+     * locked at [Intent.ACTION_USER_PRESENT], and the activity start itself can be dropped while
+     * the phone wakes up), so the wait is also polled until the screen reports back.
+     */
+    private val pendingStartCheck = object : Runnable {
+        override fun run() {
+            if (!startPending) return
+            startMirroringIfReady()
+            if (startPending) handler.postDelayed(this, START_RETRY_MS)
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -75,7 +96,12 @@ class CarConnectionWatcher : Service() {
         // Starting the capture prompt needs an awake, unlocked phone; these two system broadcasts
         // say when that becomes true. Only the system sends them, so this receiver is not exported.
         unlockReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) = startMirroringIfReady()
+            override fun onReceive(context: Context?, intent: Intent?) {
+                // Android Auto's state is only acted on once the phone is unlocked, which is also
+                // when a rising edge missed while locked can be caught up on.
+                if (readyForConsent(this@CarConnectionWatcher)) queryConnection()
+                startMirroringIfReady()
+            }
         }
         ContextCompat.registerReceiver(
             this,
@@ -92,6 +118,7 @@ class CarConnectionWatcher : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onDestroy() {
+        handler.removeCallbacks(pendingStartCheck)
         receiver?.let { runCatching { unregisterReceiver(it) } }
         receiver = null
         unlockReceiver?.let { runCatching { unregisterReceiver(it) } }
@@ -125,22 +152,37 @@ class CarConnectionWatcher : Service() {
         }
         // While the phone is locked or asleep the capture prompt cannot be answered: launching
         // then would only park it behind the keyguard, to surface whenever the user unlocks —
-        // possibly long after the car is gone. Wait for the unlock/awake broadcast instead.
+        // possibly long after the car is gone. Wait until it is awake and unlocked instead, and
+        // keep checking: the unlock broadcast is not guaranteed to arrive.
+        autoStartDelivered = false
+        startAttemptsLeft = START_ATTEMPTS
         startPending = true
+        handler.removeCallbacks(pendingStartCheck)
         startMirroringIfReady()
+        if (startPending) handler.postDelayed(pendingStartCheck, START_RETRY_MS)
     }
 
     /** Launches the capture screen once the phone is awake and unlocked. */
     private fun startMirroringIfReady() {
         if (!startPending) return
-        // The car may have left while the phone was locked; drop the waiting start.
-        if (!isProjecting(this)) {
+        // The screen took over the start (it is asking for capture, or found the car gone and
+        // went away); re-launching it would be pointless.
+        if (autoStartDelivered) {
             startPending = false
             return
         }
         if (!readyForConsent(this)) return
-        startPending = false
-        if (ScreenMirrorService.isRunning) return
+        // The car may have left while the phone was locked; Android Auto's state is only trusted
+        // once the phone is unlocked.
+        if (!isProjecting(this)) {
+            startPending = false
+            return
+        }
+        if (startAttemptsLeft <= 0) {
+            startPending = false
+            return
+        }
+        startAttemptsLeft--
         Log.i(TAG, "Android Auto connected; starting mirroring")
         startActivity(
             Intent(this, MainActivity::class.java)
@@ -156,6 +198,7 @@ class CarConnectionWatcher : Service() {
      */
     private fun onDisconnected() {
         startPending = false
+        handler.removeCallbacks(pendingStartCheck)
         stopMirroring()
         // The phone UI does not need to stay in front once the car is gone; send it to the back.
         MainActivity.moveToBackIfShowing()
@@ -211,6 +254,12 @@ class CarConnectionWatcher : Service() {
         private const val CHANNEL_ID = "car_connection"
         private const val NOTIFICATION_ID = 42
 
+        /** How often a start waiting for the unlock is re-checked. */
+        private const val START_RETRY_MS = 2_000L
+
+        /** How many launches to try before leaving the start to the user. */
+        private const val START_ATTEMPTS = 10
+
         private const val ACTION_CAR_CONNECTION_UPDATED =
             "androidx.car.app.connection.action.CAR_CONNECTION_UPDATED"
         private const val COLUMN_STATE = "CarConnectionState"
@@ -236,6 +285,19 @@ class CarConnectionWatcher : Service() {
         /** Whether Android Auto is currently projecting, i.e. the car is showing us. */
         fun isProjecting(context: Context): Boolean =
             connectionState(context) == CONNECTION_PROJECTION
+
+        /** Set by [MainActivity] once it has taken over an auto-start; same process as the service. */
+        @Volatile
+        private var autoStartDelivered = false
+
+        /**
+         * Called by [MainActivity] as soon as it actually handles an auto-start, so the watcher
+         * can stop re-launching it. A start the system silently blocks looks just like a
+         * successful one from here, hence the confirmation from the screen itself.
+         */
+        fun markAutoStartDelivered() {
+            autoStartDelivered = true
+        }
 
         /**
          * Whether the capture consent prompt could actually be shown and answered right now.

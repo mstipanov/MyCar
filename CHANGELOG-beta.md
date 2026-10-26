@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.44-beta1
+- Fixed auto-start not starting by itself when Android Auto connected while the phone was locked and you unlocked it afterwards: the capture prompt now waits for the unlock and appears then, instead of only starting when you tapped the button
+
 ## 1.43-beta1
 - Fixed MyCar behaving as if Android Auto had just connected when the phone was unlocked: if Android Auto connected while the phone was locked and then disconnected before the unlock, the waiting start is now dropped instead of asking to start mirroring
 

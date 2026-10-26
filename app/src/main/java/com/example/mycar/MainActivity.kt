@@ -376,20 +376,23 @@ class MainActivity : AppCompatActivity() {
      *
      * The launch can outlive the connection: while the phone is locked, the activity only reaches
      * the user after they unlock, which may be long after leaving the car. So the request is
-     * honoured only while Android Auto still projects, and the extra is consumed either way.
+     * honoured only once the phone is awake and unlocked, and only while Android Auto still
+     * projects; the extra is consumed either way.
      */
     private fun maybeAutoStart() {
         if (launchedForAutoStart) return
         if (!intent.getBooleanExtra(EXTRA_AUTO_START, false)) return
+        // Asking while locked would only park the consent prompt behind the keyguard; the watcher
+        // keeps the request for when the user unlocks, and comes back then.
+        if (!readyForConsent()) return
+        // The launch did arrive; tell the watcher so it stops re-launching while we handle it.
+        CarConnectionWatcher.markAutoStartDelivered()
         if (!CarConnectionWatcher.isProjecting(this)) {
             // A launch that waited behind the keyguard until after the car left.
             intent.removeExtra(EXTRA_AUTO_START)
             if (!ScreenMirrorService.isRunning) finish()
             return
         }
-        // Asking while locked would only park the consent prompt behind the keyguard; onResume
-        // runs again when the user unlocks, so wait for that.
-        if (!readyForConsent()) return
         launchedForAutoStart = true
         intent.removeExtra(EXTRA_AUTO_START)
         if (ScreenMirrorService.isRunning) {

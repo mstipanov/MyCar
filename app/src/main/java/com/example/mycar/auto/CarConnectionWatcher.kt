@@ -1,5 +1,6 @@
 package com.example.mycar.auto
 
+import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -12,6 +13,7 @@ import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -28,16 +30,27 @@ import com.example.mycar.launch.AppCloser
  * `CAR_CONNECTION_UPDATED` when it changes. Neither reaches an app that is not running, so this
  * has to be a (quiet) foreground service to survive between drives. On the transition to
  * "projecting" it launches [MainActivity] with [MainActivity.EXTRA_AUTO_START], which asks for
- * capture consent; that launch is only allowed from the background because the app holds
- * "Display over other apps" (`SYSTEM_ALERT_WINDOW`). On the way back it stops mirroring, so
- * capture never keeps running against a car that is no longer there.
+ * capture consent — but only once the phone is awake and unlocked, so the prompt is never parked
+ * behind the keyguard (and never surfaces on a later unlock, after the car is gone). That launch
+ * is only allowed from the background because the app holds "Display over other apps"
+ * (`SYSTEM_ALERT_WINDOW`). On the way back it stops mirroring, so capture never keeps running
+ * against a car that is no longer there.
  */
 class CarConnectionWatcher : Service() {
 
     private var receiver: BroadcastReceiver? = null
 
+    /** Receives the unlock or wake-up that lets a start requested meanwhile go ahead. */
+    private var unlockReceiver: BroadcastReceiver? = null
+
     /** Edge-trigger state: only act when we go from not-connected to connected. */
     private var wasConnected = false
+
+    /**
+     * Android Auto connected while the phone was locked or asleep, so the launch waits for the
+     * user to unlock it. Cleared once the launch happens or the car goes away.
+     */
+    private var startPending = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -59,6 +72,20 @@ class CarConnectionWatcher : Service() {
             IntentFilter(ACTION_CAR_CONNECTION_UPDATED),
             ContextCompat.RECEIVER_EXPORTED,
         )
+        // Starting the capture prompt needs an awake, unlocked phone; these two system broadcasts
+        // say when that becomes true. Only the system sends them, so this receiver is not exported.
+        unlockReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) = startMirroringIfReady()
+        }
+        ContextCompat.registerReceiver(
+            this,
+            unlockReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_SCREEN_ON)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         queryConnection()
     }
 
@@ -67,6 +94,8 @@ class CarConnectionWatcher : Service() {
     override fun onDestroy() {
         receiver?.let { runCatching { unregisterReceiver(it) } }
         receiver = null
+        unlockReceiver?.let { runCatching { unregisterReceiver(it) } }
+        unlockReceiver = null
         super.onDestroy()
     }
 
@@ -94,6 +123,24 @@ class CarConnectionWatcher : Service() {
             Log.w(TAG, "Android Auto connected, but \"Display over other apps\" is not granted")
             return
         }
+        // While the phone is locked or asleep the capture prompt cannot be answered: launching
+        // then would only park it behind the keyguard, to surface whenever the user unlocks —
+        // possibly long after the car is gone. Wait for the unlock/awake broadcast instead.
+        startPending = true
+        startMirroringIfReady()
+    }
+
+    /** Launches the capture screen once the phone is awake and unlocked. */
+    private fun startMirroringIfReady() {
+        if (!startPending) return
+        // The car may have left while the phone was locked; drop the waiting start.
+        if (!isProjecting(this)) {
+            startPending = false
+            return
+        }
+        if (!readyForConsent(this)) return
+        startPending = false
+        if (ScreenMirrorService.isRunning) return
         Log.i(TAG, "Android Auto connected; starting mirroring")
         startActivity(
             Intent(this, MainActivity::class.java)
@@ -108,6 +155,7 @@ class CarConnectionWatcher : Service() {
      * capture never started.
      */
     private fun onDisconnected() {
+        startPending = false
         stopMirroring()
         // The phone UI does not need to stay in front once the car is gone; send it to the back.
         MainActivity.moveToBackIfShowing()
@@ -188,6 +236,19 @@ class CarConnectionWatcher : Service() {
         /** Whether Android Auto is currently projecting, i.e. the car is showing us. */
         fun isProjecting(context: Context): Boolean =
             connectionState(context) == CONNECTION_PROJECTION
+
+        /**
+         * Whether the capture consent prompt could actually be shown and answered right now.
+         * While the phone is locked or asleep the prompt has nowhere to go, so a start that
+         * arrives then waits for [Intent.ACTION_USER_PRESENT] / [Intent.ACTION_SCREEN_ON].
+         */
+        private fun readyForConsent(context: Context): Boolean {
+            val power = context.getSystemService(PowerManager::class.java)
+            val keyguard = context.getSystemService(KeyguardManager::class.java)
+            val interactive = power?.isInteractive ?: true
+            val locked = keyguard?.isKeyguardLocked ?: false
+            return interactive && !locked
+        }
 
         /**
          * Whether the watcher should be running: auto-start needs "Display over other apps" for

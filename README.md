@@ -115,7 +115,14 @@ install it with [KingInstaller](https://github.com/fcaronte/KingInstaller/releas
 apps installed by a trusted store, so a plain sideload will not show up (the download page says
 the same). In KingInstaller pick the APK under *Select APK to install*; the first time, Android
 interrupts with **Install unknown apps → Allow from this source** — enable it for KingInstaller and
-retry the install. Then:
+retry the install.
+
+KingInstaller exists for one reason: Android Auto only lists apps whose *installer* looks like a
+trusted store, and it records the APK as installed by the Play Store. With a computer and USB
+debugging the same effect is one command, no extra app —
+`adb install -i com.android.vending MyCar-<version>.apk` (verify:
+`adb shell dumpsys package com.example.mycar | grep installerPackageName` → `com.android.vending`).
+Then:
 
 1. On the phone, open **Android Auto** settings.
 2. Scroll to **Version** and tap it ~10 times to unlock **Developer mode**.

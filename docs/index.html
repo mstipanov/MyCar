@@ -184,6 +184,15 @@
           <em>Install unknown apps → Allow from this source</em>: turn it on for KingInstaller and come
           back. Skipping this is the usual reason the install appears to do nothing.
         </p>
+        <p>
+          <strong>Why KingInstaller at all:</strong> Android Auto only lists an app when its
+          <em>installer</em> looks like a trusted store. KingInstaller records the APK as installed by
+          the Play Store, which is what makes MyCar visible — a plain sideload is not.
+          If you have a computer and USB debugging, the same result is one command, no extra app:
+          <code>adb install -i com.android.vending MyCar-&lt;version&gt;.apk</code>
+          (check with <code>adb shell dumpsys package com.example.mycar | grep installerPackageName</code>
+          → <code>com.android.vending</code>).
+        </p>
       </li>
       <li>
         <h3>Unlock Android Auto developer mode</h3>

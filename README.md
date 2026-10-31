@@ -113,7 +113,9 @@ installing it replaces the stable app on the tester's phone. Beta notes live in
 Download the APK from the [latest release](https://github.com/mstipanov/MyCar/releases/latest) and
 install it with [KingInstaller](https://github.com/fcaronte/KingInstaller/releases) — Android Auto only lists
 apps installed by a trusted store, so a plain sideload will not show up (the download page says
-the same). Then:
+the same). In KingInstaller pick the APK under *Select APK to install*; the first time, Android
+interrupts with **Install unknown apps → Allow from this source** — enable it for KingInstaller and
+retry the install. Then:
 
 1. On the phone, open **Android Auto** settings.
 2. Scroll to **Version** and tap it ~10 times to unlock **Developer mode**.
@@ -275,8 +277,9 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 ## Troubleshooting
 
 * **App does not appear in Android Auto** — *Unknown sources* is off, the build was not installed
-  by an installer that impersonates the Play Store (*KingInstaller*), or the head unit was
-  connected before the app was installed (reconnect it). Confirm the merged manifest still
+  by an installer that impersonates the Play Store (*KingInstaller*), KingInstaller was never granted
+  **Install unknown apps → Allow from this source** (the install then silently does nothing), or the
+  head unit was connected before the app was installed (reconnect it). Confirm the merged manifest still
   declares the `androidx.car.app.category.NAVIGATION` category plus the `NAVIGATION_TEMPLATES` and
   `ACCESS_SURFACE` permissions:
   `app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml`

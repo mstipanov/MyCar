@@ -107,6 +107,27 @@ td.no { color: var(--no); }
 td.maybe { color: var(--warn); }
 .fineprint { color: var(--muted); font-size: .9rem; margin-top: 12px; }
 
+/* Screenshots */
+.shots { display: grid; gap: 14px; margin: 22px 0 18px; }
+.shot { margin: 0; }
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #000;
+}
+.shot figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: .87rem;
+  line-height: 1.45;
+}
+@media (min-width: 720px) {
+  .shots { grid-template-columns: 1fr 1fr; gap: 18px; }
+}
+
 /* Steps */
 .steps { list-style: none; counter-reset: step; padding: 0; margin: 0; }
 .steps > li {

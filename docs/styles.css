@@ -108,8 +108,8 @@ td.maybe { color: var(--warn); }
 .fineprint { color: var(--muted); font-size: .9rem; margin-top: 12px; }
 
 /* Screenshots */
-.shots { display: grid; gap: 14px; margin: 22px 0 18px; }
-.shot { margin: 0; }
+.shots { display: grid; gap: 14px; margin: 22px 0 18px; justify-items: center; }
+.shot { margin: 0; max-width: 560px; }
 .shot img {
   display: block;
   width: 100%;

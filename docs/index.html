@@ -162,19 +162,23 @@
     </ul>
     <div class="shots">
       <figure class="shot">
+        <a class="zoom" href="img/car-nav.jpg" aria-label="Open this screenshot at full size">
         <picture>
           <source srcset="img/car-nav-960.webp 960w, img/car-nav.webp 1600w" sizes="(min-width: 720px) 46vw, 92vw" type="image/webp">
           <img src="img/car-nav-960.jpg" srcset="img/car-nav-960.jpg 960w, img/car-nav.jpg 1600w" sizes="(min-width: 720px) 46vw, 92vw" width="1600" height="658" loading="lazy" decoding="async"
                alt="Car head unit running Google Maps: a turn-by-turn banner across the map, the route line ahead, a small YouTube video in the top-right corner, app docks on both sides and the climate bar along the bottom.">
         </picture>
+        </a>
         <figcaption>Navigation keeps the slot, the video sits in the corner — both at once.</figcaption>
       </figure>
       <figure class="shot">
+        <a class="zoom" href="img/car-video.jpg" aria-label="Open this screenshot at full size">
         <picture>
           <source srcset="img/car-video-960.webp 960w, img/car-video.webp 1600w" sizes="(min-width: 720px) 46vw, 92vw" type="image/webp">
           <img src="img/car-video-960.jpg" srcset="img/car-video-960.jpg 960w, img/car-video.jpg 1600w" sizes="(min-width: 720px) 46vw, 92vw" width="1600" height="657" loading="lazy" decoding="async"
                alt="Car head unit showing a studio interview from a Croatian TV channel filling the middle of the screen, with the home-screen app docks on both sides and the climate bar along the bottom.">
         </picture>
+        </a>
         <figcaption>The same mirror full-screen: anything the phone shows, the car shows.</figcaption>
       </figure>
     </div>
@@ -358,5 +362,52 @@
     </p>
   </div>
 </footer>
+<script>
+/* Click a screenshot to see it full size. Without JS the link opens the image itself. */
+(function () {
+  var box = document.createElement('div');
+  box.className = 'lightbox';
+  box.hidden = true;
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.setAttribute('aria-label', 'Screenshot at full size');
+  box.innerHTML = '<img alt=""><button type="button" class="lightbox-close" aria-label="Close">\u00d7</button>';
+  document.body.appendChild(box);
+
+  var img = box.querySelector('img');
+  var closeBtn = box.querySelector('.lightbox-close');
+  var opener = null;
+
+  function open(a) {
+    var thumb = a.querySelector('img');
+    img.src = a.getAttribute('href');
+    img.alt = thumb ? thumb.alt : '';
+    box.hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    opener = a;
+    closeBtn.focus();
+  }
+
+  function close() {
+    box.hidden = true;
+    img.removeAttribute('src');
+    document.documentElement.style.overflow = '';
+    if (opener) { opener.focus(); opener = null; }
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('a.zoom'), function (a) {
+    a.addEventListener('click', function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; /* let it open in a new tab */
+      e.preventDefault();
+      open(a);
+    });
+  });
+
+  box.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !box.hidden) close();
+  });
+})();
+</script>
 </body>
 </html>

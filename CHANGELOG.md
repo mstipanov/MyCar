@@ -1,5 +1,9 @@
 # MyCar
 
+## 1.45
+- Fixed auto-start not starting by itself when Android Auto connected while the phone was locked and you unlocked it afterwards: the capture prompt now waits for the unlock and appears then
+- Fixed auto-start still needing a manual tap after that: MyCar now keeps retrying until the capture screen really appears, instead of trusting a single launch that Android can drop
+
 ## 1.43
 - Fixed MyCar behaving as if Android Auto had just connected when you unlocked the phone: if Android Auto connected while the phone was locked and then disconnected before the unlock, the waiting start is now dropped instead of asking to start mirroring
 

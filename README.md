@@ -12,6 +12,9 @@ The category is chosen in the app; both use the full-bleed `NavigationTemplate`.
 Personal sideload project. It deliberately does things Google Play does not allow, so it can
 never be published — see [Caveats](#caveats).
 
+**Guide:** <https://mstipanov.github.io/MyCar/> — setup, playing YouTube on the car screen,
+installation and troubleshooting.
+
 ## How it works
 
 Android Auto gives you no way to render arbitrary UI. The one hole is the map surface that
@@ -303,3 +306,10 @@ The DHU also has an instrument cluster mode (Ctrl+K) if you want to see the clus
 * **`Surface.lockCanvas` throws** — fall back to the documented alternative: create a
   `VirtualDisplay` on `surfaceContainer.surface` and render a `Presentation` into it. The
   Car App Library "Draw maps" guide has that example.
+
+## Support
+
+MyCar is free, with no ads and no tracking. If it is useful to you, you can support its development:
+
+- ☕ [Buy Me a Coffee](https://buymeacoffee.com/mstipanov)
+- 💳 [PayPal](https://paypal.me/mstipanov)

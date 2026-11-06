@@ -1,6 +1,7 @@
 package com.example.mycar.car
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -47,7 +48,9 @@ import com.example.mycar.touch.TouchInjectorService
  *
  * The icon-only quick launch strip gets its own space: a column on the right normally, or a row
  * along the bottom while a media/assistant panel is open. The mirror is fitted into what is left,
- * so the strip never covers it.
+ * so the strip never covers it. When the chosen apps no longer fit in the strip, an expand action
+ * opens a temporary grid over the mirror; choosing an app (or closing the panel) brings the whole
+ * mirror back.
  */
 class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
@@ -72,6 +75,9 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     /** Fill behind the quick launch strip. */
     private val launcherPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PANEL_COLOR }
 
+    /** Fill behind the temporary expanded launcher; more transparent so the mirror shows through. */
+    private val expandedPanelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = EXPANDED_PANEL_COLOR }
+
     /** Faint disc behind action cells (e.g. rotate) so they read as buttons, not apps. */
     private val actionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ACTION_COLOR }
 
@@ -79,6 +85,58 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     private val rotateIcon: Bitmap? by lazy {
         ContextCompat.getDrawable(context, R.drawable.ic_rotate)?.let { rasterize(it) }
     }
+
+    /** Expand/collapse glyphs for the action cell, rasterized once. */
+    private val expandIcon: Bitmap? by lazy {
+        ContextCompat.getDrawable(context, R.drawable.ic_launcher_expand)?.let { rasterize(it) }
+    }
+    private val collapseIcon: Bitmap? by lazy {
+        ContextCompat.getDrawable(context, R.drawable.ic_launcher_collapse)?.let { rasterize(it) }
+    }
+
+    /** Apps shown by the launcher, refreshed only when the launcher settings change. */
+    private var launcherApps: List<LauncherApp> = emptyList()
+    private var launcherAppsGeneration = -1L
+
+    /** Bumped by the settings listener; layouts only rebuild when this changes. */
+    private var launcherGeneration = 0L
+
+    /** Expanded/collapsed state and what each tap does. */
+    private val launcher = LauncherInteraction(
+        launchApp = { index ->
+            launcherApps.getOrNull(index)?.let { QuickLaunch.open(context, it.packageName) }
+        },
+        rotate = { rotateScreen() },
+    )
+
+    /**
+     * The collapsed strip and the expanded panel, rebuilt once per size or launcher-settings
+     * change. Drawing only reads them, so the per-frame path allocates no layout objects.
+     */
+    private var collapsedLayout: LauncherGeometry.CollapsedLayout? = null
+    private var expandedLayout: LauncherGeometry.ExpandedLayout? = null
+    private var layoutValid = false
+    private val layoutArea = Rect()
+    private var layoutThickness = 0f
+    private var layoutAtBottom = false
+
+    /** Scratch rects for drawing cells, icons and the panel; the draw path allocates none. */
+    private val panelScratch = RectF()
+    private val cellScratch = RectF()
+    private val iconScratch = RectF()
+
+    private val settings = Settings.prefs(context)
+    private var listeningForSettings = false
+    private val settingsListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == Settings.KEY_QUICK_LAUNCH || key == Settings.KEY_LAUNCHER_APPS) {
+                launcherGeneration++
+                layoutValid = false
+                if (key == Settings.KEY_QUICK_LAUNCH && !Settings.quickLaunch(context)) {
+                    launcher.collapse()
+                }
+            }
+        }
 
     /**
      * Turns the car's pan stream into injectable drags. The car never tells us where a drag began
@@ -107,11 +165,15 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
     override fun onSurfaceAvailable(surfaceContainer: SurfaceContainer) {
         // A different Surface means the host rebuilt it, so any previously reported area is
-        // stale until the host sends a new one.
+        // stale until the host sends a new one. A rebuilt surface (and a reconnect, which makes a
+        // new callback) always starts from the collapsed strip.
         if (container?.surface !== surfaceContainer.surface) {
             visibleArea = null
             stableArea = null
+            launcher.collapse()
+            layoutValid = false
         }
+        startListeningForSettings()
         container = surfaceContainer
         if (!rendering) {
             rendering = true
@@ -152,12 +214,19 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
             val density = density(surfaceContainer)
             val area = drawingArea(surfaceContainer.width, surfaceContainer.height, density)
             val atBottom = launcherAtBottom(surfaceContainer.width, surfaceContainer.height, density)
-            val entry = launcherLayout(area, density, atBottom).cells
-                .firstOrNull { it.first.contains(x, y) }
-                ?.second
-            if (entry != null) {
-                entry.activate()
-                return
+            val collapsed = ensureLauncherLayout(area, density, atBottom)
+            if (collapsed != null) {
+                val tap = LauncherGeometry.tapAt(
+                    collapsed = collapsed,
+                    expanded = expandedLayout,
+                    expandedVisible = launcher.expanded,
+                    x = x,
+                    y = y,
+                )
+                if (tap.kind != LauncherGeometry.Tap.Kind.NONE) {
+                    launcher.tap(tap)
+                    return
+                }
             }
         }
         forwardTap(x, y)
@@ -296,6 +365,20 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
     fun stop() {
         rendering = false
         handler.removeCallbacks(tick)
+        launcher.collapse()
+        stopListeningForSettings()
+    }
+
+    private fun startListeningForSettings() {
+        if (listeningForSettings) return
+        settings.registerOnSharedPreferenceChangeListener(settingsListener)
+        listeningForSettings = true
+    }
+
+    private fun stopListeningForSettings() {
+        if (!listeningForSettings) return
+        settings.unregisterOnSharedPreferenceChangeListener(settingsListener)
+        listeningForSettings = false
     }
 
     /**
@@ -434,32 +517,15 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
     // region quick launch launcher
 
-    /** One tappable cell: an app icon to open, or a built-in action like rotate. */
-    private class LauncherEntry(
-        val icon: Bitmap?,
-        val isAction: Boolean,
-        val activate: () -> Unit,
-    )
-
-    /** The launcher strip plus the tappable cell for each entry, both in surface pixels. */
-    private data class LauncherLayout(val strip: RectF, val cells: List<Pair<RectF, LauncherEntry>>)
+    /** One app offered by the launcher, resolved once per launcher-settings change. */
+    private class LauncherApp(val packageName: String, val icon: Bitmap?)
 
     /** True when the user wants the car-side launcher at all. */
     private fun launcherEnabled(): Boolean = Settings.quickLaunch(context)
 
-    /** The launcher cells: the app targets, then the rotate action. Cheap to rebuild each frame. */
-    private fun launcherEntries(): List<LauncherEntry> {
-        val entries = ArrayList<LauncherEntry>()
-        for (target in QuickLaunch.targets(context)) {
-            entries += LauncherEntry(target.icon, isAction = false) {
-                QuickLaunch.open(context, target.packageName)
-            }
-        }
-        rotateIcon?.let { icon ->
-            entries += LauncherEntry(icon, isAction = true) { rotateScreen() }
-        }
-        return entries
-    }
+    /** The app cells' entries; the rotate/expand/close actions are part of the geometry. */
+    private fun launcherEntries(): List<LauncherApp> =
+        QuickLaunch.targets(context).map { LauncherApp(it.packageName, it.icon) }
 
     /** Toggles the mirrored phone between portrait and landscape. */
     private fun rotateScreen() {
@@ -514,76 +580,108 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
         }
     }
 
-    /** The strip the launcher occupies: a column on the right, or a row along the bottom. */
-    private fun launcherLayout(area: Rect, density: Float, atBottom: Boolean): LauncherLayout {
+    /**
+     * Rebuilds the launcher layouts only when the surface size, strip orientation or launcher
+     * settings changed. Always returns the collapsed layout: the strip stays where it is while the
+     * expanded panel is open, so the expand cell can close it and the mirror does not jump.
+     */
+    private fun ensureLauncherLayout(
+        area: Rect,
+        density: Float,
+        atBottom: Boolean,
+    ): LauncherGeometry.CollapsedLayout? {
+        if (launcherAppsGeneration != launcherGeneration) {
+            launcherApps = launcherEntries()
+            launcherAppsGeneration = launcherGeneration
+            layoutValid = false
+        }
         val thickness = px(LAUNCHER_THICKNESS_DP, density)
-        val strip = if (atBottom) {
-            RectF(
+        if (!layoutValid ||
+            layoutArea.left != area.left || layoutArea.top != area.top ||
+            layoutArea.right != area.right || layoutArea.bottom != area.bottom ||
+            layoutThickness != thickness || layoutAtBottom != atBottom
+        ) {
+            val pureArea = LauncherGeometry.Rect(
                 area.left.toFloat(),
-                area.bottom - thickness,
-                area.right.toFloat(),
-                area.bottom.toFloat(),
-            )
-        } else {
-            RectF(
-                area.right - thickness,
                 area.top.toFloat(),
                 area.right.toFloat(),
                 area.bottom.toFloat(),
             )
+            collapsedLayout = LauncherGeometry.collapsedLayout(
+                area = pureArea,
+                thickness = thickness,
+                atBottom = atBottom,
+                appCount = launcherApps.size,
+            )
+            expandedLayout = LauncherGeometry.expandedLayout(
+                area = pureArea,
+                thickness = thickness,
+                atBottom = atBottom,
+                appCount = launcherApps.size,
+            )
+            layoutArea.set(area)
+            layoutThickness = thickness
+            layoutAtBottom = atBottom
+            layoutValid = true
         }
-
-        val entries = launcherEntries()
-        val apps = entries.filter { !it.isAction }
-        val actions = entries.filter { it.isAction }
-        val cell = thickness
-        val cells = ArrayList<Pair<RectF, LauncherEntry>>(entries.size)
-        if (atBottom) {
-            // Apps centred along the strip; actions pinned to the far (right) end.
-            var left = strip.centerX() - cell * apps.size / 2f
-            for (entry in apps) {
-                cells += RectF(left, strip.top, left + cell, strip.bottom) to entry
-                left += cell
-            }
-            var right = strip.right
-            for (entry in actions) {
-                cells += RectF(right - cell, strip.top, right, strip.bottom) to entry
-                right -= cell
-            }
-        } else {
-            // Apps centred in the column; actions pinned to the bottom.
-            var top = strip.centerY() - cell * apps.size / 2f
-            for (entry in apps) {
-                cells += RectF(strip.left, top, strip.right, top + cell) to entry
-                top += cell
-            }
-            var bottom = strip.bottom
-            for (entry in actions) {
-                cells += RectF(strip.left, bottom - cell, strip.right, bottom) to entry
-                bottom -= cell
-            }
-        }
-        return LauncherLayout(strip, cells)
+        return collapsedLayout
     }
 
-    /** Paints the strip: a dark bar of app icons only — no labels, no covering panel. */
+    /** Paints the strip and, while expanded, the temporary panel over the mirror. */
     private fun drawLauncher(canvas: Canvas, area: Rect, density: Float, atBottom: Boolean) {
-        val layout = launcherLayout(area, density, atBottom)
-        canvas.drawRect(layout.strip, launcherPaint)
+        val collapsed = ensureLauncherLayout(area, density, atBottom) ?: return
+        panelScratch.set(
+            collapsed.strip.left,
+            collapsed.strip.top,
+            collapsed.strip.right,
+            collapsed.strip.bottom,
+        )
+        canvas.drawRect(panelScratch, launcherPaint)
+        drawCells(canvas, collapsed.cells, density)
 
-        val iconSize = px(LAUNCHER_ICON_DP, density)
-        for ((cell, entry) in layout.cells) {
-            val icon = entry.icon ?: continue
-            val cx = cell.centerX()
-            val cy = cell.centerY()
-            if (entry.isAction) canvas.drawCircle(cx, cy, iconSize * 0.62f, actionPaint)
-            canvas.drawBitmap(
-                icon,
-                null,
-                RectF(cx - iconSize / 2f, cy - iconSize / 2f, cx + iconSize / 2f, cy + iconSize / 2f),
-                paint,
+        if (!launcher.expanded) return
+        val expanded = expandedLayout ?: return
+        panelScratch.set(
+            expanded.panel.left,
+            expanded.panel.top,
+            expanded.panel.right,
+            expanded.panel.bottom,
+        )
+        canvas.drawRect(panelScratch, expandedPanelPaint)
+        drawCells(canvas, expanded.cells, density)
+    }
+
+    /**
+     * Draws icons into the already-built cells. Reuses [cellScratch] and [iconScratch], so the
+     * per-frame path creates no rectangles and no layouts.
+     */
+    private fun drawCells(canvas: Canvas, cells: List<LauncherGeometry.Cell>, density: Float) {
+        val minimumIcon = px(LAUNCHER_ICON_DP, density)
+        for (cell in cells) {
+            cellScratch.set(cell.rect.left, cell.rect.top, cell.rect.right, cell.rect.bottom)
+            val cellEdge = minOf(cellScratch.width(), cellScratch.height())
+            val iconSize = maxOf(minimumIcon, cellEdge * ICON_FRACTION).coerceAtMost(cellEdge)
+            val cx = cellScratch.centerX()
+            val cy = cellScratch.centerY()
+            if (cell.action != null) {
+                canvas.drawCircle(cx, cy, iconSize * 0.62f, actionPaint)
+            }
+            val icon = iconFor(cell) ?: continue
+            iconScratch.set(
+                cx - iconSize / 2f,
+                cy - iconSize / 2f,
+                cx + iconSize / 2f,
+                cy + iconSize / 2f,
             )
+            canvas.drawBitmap(icon, null, iconScratch, paint)
         }
+    }
+
+    private fun iconFor(cell: LauncherGeometry.Cell): Bitmap? = when (cell.action) {
+        LauncherGeometry.Action.EXPAND -> if (launcher.expanded) collapseIcon else expandIcon
+        LauncherGeometry.Action.ROTATE -> rotateIcon
+        LauncherGeometry.Action.CLOSE -> collapseIcon
+        null -> launcherApps.getOrNull(cell.appIndex)?.icon
     }
 
     /** Surface pixels per dp. The host reports the surface dpi; assume mdpi if it does not. */
@@ -616,6 +714,12 @@ class MirrorSurfaceCallback(private val context: Context) : SurfaceCallback {
 
         /** Near-black bar behind the icons. */
         val PANEL_COLOR = 0xF21B1B1B.toInt()
+
+        /** Slightly more transparent near-black behind the expanded panel. */
+        val EXPANDED_PANEL_COLOR = 0xE61B1B1B.toInt()
+
+        /** Expanded icons take this fraction of their cell, but never less than [LAUNCHER_ICON_DP]. */
+        const val ICON_FRACTION = 0.55f
 
         /** Faint disc behind action cells so they read as buttons. */
         val ACTION_COLOR = 0x33FFFFFF

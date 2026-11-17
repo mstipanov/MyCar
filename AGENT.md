@@ -40,15 +40,21 @@ one. A rebuilt APK with the same `versionCode` is invisible to users.
 
 ## Step 1 — Bump the version
 
+Versions follow the shared numbering: a version starts as `<major>.<minor>-beta1` and the release
+drops the suffix; another beta of the same version only bumps `-betaN`. `versionCode` is a
+separate counter that increases for **every** published build. A beta and the release of the same
+version must never share a code: the in-app updater only offers strictly greater codes, so the
+release would make the beta invisible (as happened with 1.47 and 1.47-beta1).
+
 Edit `app/build.gradle.kts` (`defaultConfig`):
 
 ```kotlin
-versionCode = 21     // always +1
-versionName = "1.16" // increment the last segment, e.g. 1.15 -> 1.16
+versionCode = 21     // always +1 per published build
+versionName = "1.16" // the upcoming release; the -betaN suffix lives in the beta build type
 ```
 
-Keep `versionCode` and `versionName` in lockstep with the newest `## <version>` section in
-`CHANGELOG.md`.
+Keep the version name in lockstep with the newest `## <version>` section in `CHANGELOG.md`, or
+`CHANGELOG-beta.md` while the version is still in beta.
 
 ## Step 2 — Update `CHANGELOG.md`
 
@@ -114,14 +120,18 @@ new key would force every user to uninstall and reinstall. Never commit `keystor
 Beta builds are cut the same way but are published as a GitHub **pre-release** rather than the
 stable release:
 
-1. Bump `versionCode` **and** the `-betaN` suffix in the `beta` build type
-   (`app/build.gradle.kts`).
+1. For a new version, bump the minor in `defaultConfig.versionName`; for another beta of the
+   same version keep the name and only raise `versionCode`. Set `versionNameSuffix` in the
+   `beta` build type to the matching `-betaN`.
 2. Add the `## <versionName>` section to `CHANGELOG-beta.md` (e.g. `## 1.16-beta1`).
 3. `./gradlew :app:assembleBeta` → `app/build/outputs/apk/beta/MyCar-<versionName>.apk`.
 4. `gh release create <version> app/build/outputs/apk/beta/MyCar-<versionName>.apk \
      --title "MyCar-v<versionName>" --prerelease --notes-file <notes>` — the notes are the beta
    changelog section plus the `SUPPORT.md` footer, as in
    [Step 4](#step-4--publish-the-release).
+
+When that beta is accepted, release the same version name with the beta suffix removed and one
+more `versionCode` bump, so beta testers receive the release as an update too.
 
 Beta shares the stable package and **signature** (both use the release key), so a beta installs
 over the stable app on a tester's phone, and vice versa.

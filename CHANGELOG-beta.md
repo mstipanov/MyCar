@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.48-beta1
+- No functional changes yet: this beta starts the 1.48 cycle, so beta testers on MyCar 1.47 keep receiving beta builds
+
 ## 1.47-beta1
 - Fixed the phone staying locked in landscape after a mirroring session when auto-rotate was off: MyCar now restores the orientation it found instead of leaving its own behind
 - A landscape lock left behind by an interrupted session (an app update, a reboot, a force stop) is now cleared when MyCar starts

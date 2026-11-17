@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.46-beta1
+- Quick launch now handles more apps than the strip can show: a new expand button opens a temporary grid over the mirror with all of them, and picking an app or closing the panel brings the mirror back
+
 ## 1.45-beta1
 - Fixed auto-start still needing a manual tap when Android Auto connected while the phone was locked: after the unlock MyCar now keeps retrying until the capture screen really appears, instead of trusting a single launch that Android can drop
 

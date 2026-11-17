@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.46
+- Quick launch now handles more apps than the strip can show: a new expand button opens a temporary grid over the mirror with all of them, and picking an app or closing the panel brings the mirror back
+
 ## 1.45
 - Fixed auto-start not starting by itself when Android Auto connected while the phone was locked and you unlocked it afterwards: the capture prompt now waits for the unlock and appears then
 - Fixed auto-start still needing a manual tap after that: MyCar now keeps retrying until the capture screen really appears, instead of trusting a single launch that Android can drop

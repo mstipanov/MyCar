@@ -3,6 +3,7 @@ package com.example.mycar.auto
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.example.mycar.RotationLock
 import com.example.mycar.Settings
 import com.example.mycar.audio.AnnouncementPauser
 import com.example.mycar.car.CarCategory
@@ -21,12 +22,19 @@ class RestartReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED -> restoreWatcher(context)
+            Intent.ACTION_BOOT_COMPLETED -> {
+                // A reboot (or an update, below) kills the process without the service's normal
+                // rotation cleanup. Put the phone's own rotation settings back before anything
+                // else; if auto-start locks landscape again, it does so from scratch.
+                RotationLock.unlock(context)
+                restoreWatcher(context)
+            }
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 // An app update resets the CarAppService components to the manifest default, so
                 // re-apply the stored Android Auto category instead of waiting for the phone UI.
                 CarCategory.register(context, Settings.carCategory(context))
                 AnnouncementPauser.start(context)
+                RotationLock.unlock(context)
                 restoreWatcher(context)
             }
         }

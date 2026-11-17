@@ -1,5 +1,6 @@
 package com.example.mycar
 
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
@@ -37,25 +38,13 @@ object RotationLock {
 
     /**
      * Turns auto-rotate off and rotates to landscape, remembering the previous auto-rotate value
-     * so [unlock] can put it back. Returns false (and does nothing) without the required access.
+     * and orientation so [unlock] can put both back. Returns false (and does nothing) without the
+     * required access.
      */
     fun lockLandscape(context: Context): Boolean {
         if (!isAllowed(context)) return false
         val resolver = context.contentResolver
-        val prefs = Settings.prefs(context)
-
-        if (!prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)) {
-            prefs.edit()
-                .putInt(
-                    Settings.KEY_AUTOROTATE_BACKUP,
-                    AndroidSettings.System.getInt(
-                        resolver,
-                        AndroidSettings.System.ACCELEROMETER_ROTATION,
-                        1,
-                    ),
-                )
-                .apply()
-        }
+        rememberRotation(context, resolver)
 
         return try {
             AndroidSettings.System.putInt(
@@ -73,26 +62,14 @@ object RotationLock {
 
     /**
      * Forces the display to the opposite orientation (portrait <-> landscape) for the car
-     * session, turning auto-rotate off, and remembers the previous auto-rotate value for [unlock].
-     * This is what the car launcher's rotate button calls. False without the required access.
+     * session, turning auto-rotate off, and remembers the previous auto-rotate value and
+     * orientation for [unlock]. This is what the car launcher's rotate button calls. False without
+     * the required access.
      */
     fun togglePortraitLandscape(context: Context): Boolean {
         if (!isAllowed(context)) return false
         val resolver = context.contentResolver
-        val prefs = Settings.prefs(context)
-
-        if (!prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)) {
-            prefs.edit()
-                .putInt(
-                    Settings.KEY_AUTOROTATE_BACKUP,
-                    AndroidSettings.System.getInt(
-                        resolver,
-                        AndroidSettings.System.ACCELEROMETER_ROTATION,
-                        1,
-                    ),
-                )
-                .apply()
-        }
+        rememberRotation(context, resolver)
 
         // Base the toggle on the display's *actual* rotation, not `user_rotation`: with auto-rotate
         // on (the default, since "lock landscape" is off) `user_rotation` goes stale, so the first
@@ -116,6 +93,34 @@ object RotationLock {
     }
 
     /**
+     * Saves the rotation settings once, before MyCar changes them. Both values matter: unlocking
+     * only auto-rotate is not enough for a user who keeps auto-rotate off, because MyCar would
+     * have left their `user_rotation` pointing at the landscape orientation it forced.
+     */
+    private fun rememberRotation(context: Context, resolver: ContentResolver) {
+        val prefs = Settings.prefs(context)
+        if (prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)) return
+        prefs.edit()
+            .putInt(
+                Settings.KEY_AUTOROTATE_BACKUP,
+                AndroidSettings.System.getInt(
+                    resolver,
+                    AndroidSettings.System.ACCELEROMETER_ROTATION,
+                    1,
+                ),
+            )
+            .putInt(
+                Settings.KEY_USER_ROTATION_BACKUP,
+                AndroidSettings.System.getInt(
+                    resolver,
+                    USER_ROTATION,
+                    Surface.ROTATION_0,
+                ),
+            )
+            .apply()
+    }
+
+    /**
      * The display's current rotation. Read live from the display because `user_rotation` is only
      * meaningful while auto-rotate is off; falls back to that setting if the display is unavailable.
      */
@@ -135,23 +140,44 @@ object RotationLock {
         }.getOrDefault(Surface.ROTATION_0)
     }
 
-    /** Restores the auto-rotate setting saved by [lockLandscape]. No-op if we never locked. */
+    /**
+     * Restores the rotation settings saved by [lockLandscape] or [togglePortraitLandscape]:
+     * both the auto-rotate mode and the user's own orientation. No-op if we never changed them.
+     */
     fun unlock(context: Context) {
         if (!isAllowed(context)) return
         val prefs = Settings.prefs(context)
-        if (!prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)) return
+        val hadAutoRotate = prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)
+        val hadUserRotation = prefs.contains(Settings.KEY_USER_ROTATION_BACKUP)
+        if (!hadAutoRotate && !hadUserRotation) return
 
-        val previous = prefs.getInt(Settings.KEY_AUTOROTATE_BACKUP, 1)
-        prefs.edit().remove(Settings.KEY_AUTOROTATE_BACKUP).apply()
+        val previousAutoRotate = prefs.getInt(Settings.KEY_AUTOROTATE_BACKUP, 1)
+        val previousUserRotation = prefs.getInt(
+            Settings.KEY_USER_ROTATION_BACKUP,
+            Surface.ROTATION_0,
+        )
+        prefs.edit()
+            .remove(Settings.KEY_AUTOROTATE_BACKUP)
+            .remove(Settings.KEY_USER_ROTATION_BACKUP)
+            .apply()
 
-        try {
-            AndroidSettings.System.putInt(
-                context.contentResolver,
-                AndroidSettings.System.ACCELEROMETER_ROTATION,
-                previous,
-            )
-        } catch (t: Throwable) {
-            Log.w(TAG, "Could not restore auto-rotate", t)
+        val resolver = context.contentResolver
+        // Restore the orientation before re-enabling auto-rotate: while auto-rotate is still off,
+        // the display immediately follows this value, so the phone does not end up pinned to the
+        // landscape orientation MyCar forced.
+        if (hadUserRotation) {
+            runCatching {
+                AndroidSettings.System.putInt(resolver, USER_ROTATION, previousUserRotation)
+            }.onFailure { Log.w(TAG, "Could not restore user rotation", it) }
+        }
+        if (hadAutoRotate) {
+            runCatching {
+                AndroidSettings.System.putInt(
+                    resolver,
+                    AndroidSettings.System.ACCELEROMETER_ROTATION,
+                    previousAutoRotate,
+                )
+            }.onFailure { Log.w(TAG, "Could not restore auto-rotate", it) }
         }
     }
 }

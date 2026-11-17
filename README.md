@@ -153,8 +153,8 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
 * **Keep the screen on while mirroring** — holds a screen wake lock, so the mirror keeps showing
   content instead of the phone sleeping (which would mirror a black screen).
 * **Lock the screen to landscape while mirroring** — forces the device rotation and turns
-  auto-rotate off for the session. Needs the *Modify system settings* special access; the
-  previous auto-rotate setting is restored when mirroring stops.
+  auto-rotate off for the session. Needs the *Modify system settings* special access; your
+  previous auto-rotate setting and orientation are restored when mirroring stops.
 * **Car screen scaling** — how the mirrored screen is fitted into the map area. *Fit* shows the
   whole phone screen with black bars; *Fill height* crops the sides (best full screen); *Fill
   width* crops the top and bottom (best when a side panel narrows the area); *Fill* (the default)

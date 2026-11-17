@@ -30,6 +30,9 @@ object Settings {
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
 
+    /** Remembers the user's own orientation while we force landscape (auto-rotate off). */
+    const val KEY_USER_ROTATION_BACKUP = "userRotationBackup"
+
     /**
      * Which theme to use: follow the system, or force light/dark. Default is the system setting.
      * Applied by `MyCarApp` at startup and again when the choice changes.

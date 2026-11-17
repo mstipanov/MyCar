@@ -1,5 +1,9 @@
 # MyCar
 
+## 1.47
+- Fixed the phone staying locked in landscape after a mirroring session when auto-rotate was off: MyCar now restores the orientation it found instead of leaving its own behind
+- A landscape lock left behind by an interrupted session (an app update, a reboot, a force stop) is now cleared when MyCar starts
+
 ## 1.46
 - Quick launch now handles more apps than the strip can show: a new expand button opens a temporary grid over the mirror with all of them, and picking an app or closing the panel brings the mirror back
 

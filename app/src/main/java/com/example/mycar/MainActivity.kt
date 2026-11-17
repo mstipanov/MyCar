@@ -320,6 +320,12 @@ class MainActivity : AppCompatActivity() {
             RotationLock.isAllowed(this)
         ) {
             RotationLock.lockLandscape(this)
+        } else if (!ScreenMirrorService.isRunning) {
+            // No capture is running, so nothing should still hold the phone's rotation. This also
+            // clears a lock left behind when a previous session ended without its cleanup (the
+            // process was killed by an update, say), which is why the phone could stay in
+            // landscape even with "lock landscape" off.
+            RotationLock.unlock(this)
         }
         updateTouchControlUi()
         updateNotificationAccessUi()

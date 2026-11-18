@@ -79,6 +79,10 @@ Grab the latest APK from the [Releases page](https://github.com/mstipanov/MyCar/
 `MyCar-<version>.apk`, signed with the project release key and installable with
 [KingInstaller](https://github.com/fcaronte/KingInstaller/releases).
 
+Development stops at a beta: build and publish it as a GitHub **pre-release**, then wait until the
+owner has tested it and said it is OK. Only then cut the stable release — same version name, drop
+the `-betaN` suffix, and bump `versionCode` once more.
+
 Each release is built from the tagged source and published by hand:
 
 ```sh

@@ -291,6 +291,33 @@
                     style="@style/MyCar.SectionCaption"
                     android:text="@string/section_updates" />
 
+                <TextView
+                    style="@style/MyCar.FieldLabel"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/update_channel" />
+
+                <RadioGroup
+                    android:id="@+id/channel_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <RadioButton
+                        android:id="@+id/channel_stable"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/update_channel_stable" />
+
+                    <RadioButton
+                        android:id="@+id/channel_beta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/update_channel_beta" />
+                </RadioGroup>
+
+                <TextView
+                    style="@style/MyCar.Hint"
+                    android:text="@string/update_channel_hint" />
+
                 <Button
                     android:id="@+id/check_updates"
                     style="@style/MyCar.Button.Secondary"

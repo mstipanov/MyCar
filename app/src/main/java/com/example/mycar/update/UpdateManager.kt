@@ -7,7 +7,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.pm.PackageInfoCompat
-import com.example.mycar.BuildConfig
+import com.example.mycar.Settings
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -34,8 +34,8 @@ enum class UpdateCheckOutcome {
  * Deliberately dependency-free (HttpURLConnection + org.json) so the app carries no HTTP or
  * serialization stack just for updates. All callbacks are delivered on the main thread.
  *
- * The channel is chosen at build time: stable builds point at `mycar.sting.hr`, beta builds at
- * `mycar-beta.sting.hr` (see `UPDATE_BASE_URL` in `app/build.gradle.kts`).
+ * The channel is chosen in the phone UI and defaults to the build's own: stable builds check
+ * `mycar.sting.hr`, beta builds check `mycar-beta.sting.hr` (see `Settings.UpdateChannel`).
  */
 class UpdateManager(private val context: Context) {
 
@@ -45,10 +45,9 @@ class UpdateManager(private val context: Context) {
     private val main = Handler(Looper.getMainLooper())
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    /** Base URL of the distribution server. Editable so a build can be pointed at localhost. */
-    var baseUrl: String
-        get() = prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL).orEmpty().trimEnd('/')
-        set(value) = prefs.edit().putString(KEY_BASE_URL, value.trim()).apply()
+    /** The channel selected in the phone UI; the build type only chose its default. */
+    private val baseUrl: String
+        get() = Settings.updateChannel(context).baseUrl
 
     fun check(force: Boolean = false, onResult: (UpdateCheckOutcome, AvailableUpdate?) -> Unit) {
         worker.execute {
@@ -185,10 +184,6 @@ class UpdateManager(private val context: Context) {
 
     private companion object {
         const val PREFS_NAME = "updates"
-        const val KEY_BASE_URL = "baseUrl"
         const val KEY_DISMISSED_VERSION = "dismissedVersion"
-
-        /** Stable or beta, baked in per build type. */
-        val DEFAULT_BASE_URL = BuildConfig.UPDATE_BASE_URL
     }
 }

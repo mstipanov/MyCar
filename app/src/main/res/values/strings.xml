@@ -79,6 +79,10 @@
     <string name="touch_service_description">Lets MyCar tap the phone when you touch the mirror on the car screen, and press Share on the system screen-capture prompt for hands-free start. It only reads that system prompt.</string>
 
     <string name="check_updates">Check for updates</string>
+    <string name="update_channel">Update channel</string>
+    <string name="update_channel_stable">Stable: tested releases</string>
+    <string name="update_channel_beta">Beta: early features</string>
+    <string name="update_channel_hint">Beta gets new features first and may be less stable. The choice applies from the next update check.</string>
     <string name="update_checking">Checking for updates…</string>
     <string name="update_up_to_date">You are on the latest version (%1$s).</string>
     <string name="update_unreachable">Could not reach the update server.</string>

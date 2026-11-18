@@ -96,7 +96,8 @@ release carries the Buy Me a Coffee / PayPal links. `AGENT.md` documents the ful
 Installed builds can update themselves: `update/UpdateManager.kt` polls a `/version` endpoint,
 downloads the newer APK and verifies the package name and `versionCode` before handing it to the
 system installer. The updater is dependency-free (`HttpURLConnection` + `org.json`), so the app
-pulls in no HTTP or serialization stack just to update itself.
+pulls in no HTTP or serialization stack just to update itself. The **Update channel** choice in
+the Updates card switches between stable and beta; the build type only sets the initial default.
 
 ### Beta builds
 

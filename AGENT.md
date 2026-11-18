@@ -139,9 +139,10 @@ over the stable app on a tester's phone, and vice versa.
 ## In-app updates
 
 `app/.../update/UpdateManager.kt` calls `<baseUrl>/version` and compares `versionCode` to the
-installed one. The base URL is baked in per build type: stable `https://mycar.sting.hr`, beta
-`https://mycar-beta.sting.hr` (`UPDATE_BASE_URL` in `app/build.gradle.kts`). That endpoint is
-served outside this repository and is unaffected by GitHub Releases.
+installed one. The base URL comes from the channel chosen in the phone UI
+(`Settings.UpdateChannel`) and defaults to the build's own: stable `https://mycar.sting.hr`, beta
+`https://mycar-beta.sting.hr` (`UPDATE_BASE_URL` in `app/build.gradle.kts` sets that default).
+The endpoint is served outside this repository and is unaffected by GitHub Releases.
 
 The distributor's MyCar stable channel serves `app/build/outputs/apk/release`, so it hands out the
 same **release-key-signed** APK as the GitHub Release — publish with `:app:assembleRelease`, never

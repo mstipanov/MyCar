@@ -285,6 +285,22 @@ class MainActivity : AppCompatActivity() {
 
         updates = UpdateManager(this)
 
+        val channelGroup = findViewById<RadioGroup>(R.id.channel_group)
+        channelGroup.check(
+            when (Settings.updateChannel(this)) {
+                UpdateChannel.STABLE -> R.id.channel_stable
+                UpdateChannel.BETA -> R.id.channel_beta
+            },
+        )
+        channelGroup.setOnCheckedChangeListener { _, checkedId ->
+            Settings.setUpdateChannel(
+                this,
+                if (checkedId == R.id.channel_beta) UpdateChannel.BETA else UpdateChannel.STABLE,
+            )
+            // The previous result belongs to the channel that was selected then.
+            updateStatusView.setText("")
+        }
+
         startButton.setOnClickListener { requestProjection() }
         stopButton.setOnClickListener {
             ScreenMirrorService.stop(this)

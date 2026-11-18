@@ -27,6 +27,9 @@ object Settings {
     const val KEY_THEME_MODE = "themeMode"
     const val KEY_PAUSE_FOR_ANNOUNCEMENTS = "pauseForAnnouncements"
 
+    /** Which update channel the in-app updater follows (stable or beta). */
+    const val KEY_UPDATE_CHANNEL = "updateChannel"
+
     /** Remembers the user's auto-rotate setting while we force landscape. */
     const val KEY_AUTOROTATE_BACKUP = "autoRotateBackup"
 
@@ -44,6 +47,22 @@ object Settings {
 
     fun setThemeMode(context: Context, mode: ThemeMode) {
         prefs(context).edit().putString(KEY_THEME_MODE, mode.name).apply()
+    }
+
+    /**
+     * The update channel the user picked, or the build's own channel when they never picked one:
+     * a stable build defaults to stable, a beta build to beta. The choice lives in the app's
+     * settings, so it survives moving between the channels.
+     */
+    fun updateChannel(context: Context): UpdateChannel {
+        val stored = prefs(context).getString(KEY_UPDATE_CHANNEL, null)
+        return UpdateChannel.entries.firstOrNull { it.name == stored }
+            ?: UpdateChannel.entries.firstOrNull { it.baseUrl == BuildConfig.UPDATE_BASE_URL }
+            ?: UpdateChannel.STABLE
+    }
+
+    fun setUpdateChannel(context: Context, channel: UpdateChannel) {
+        prefs(context).edit().putString(KEY_UPDATE_CHANNEL, channel.name).apply()
     }
 
     /**
@@ -246,6 +265,19 @@ enum class ThemeMode(val delegateMode: Int) {
     SYSTEM(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM),
     LIGHT(AppCompatDelegate.MODE_NIGHT_NO),
     DARK(AppCompatDelegate.MODE_NIGHT_YES),
+}
+
+/**
+ * The two distribution channels, each with the host served by the AndroidAppDistributor. The
+ * build type only decides the default; the user can switch in the Updates card, and the choice
+ * persists when the new build replaces the app.
+ */
+enum class UpdateChannel(val baseUrl: String) {
+    /** Tested releases. */
+    STABLE("https://mycar.sting.hr"),
+
+    /** Early beta builds, for testing new features before they reach stable. */
+    BETA("https://mycar-beta.sting.hr"),
 }
 
 /**

@@ -69,13 +69,13 @@ class RotateButtonTest {
         try {
             callback.onSurfaceAvailable(SurfaceContainer(surface, WIDTH, HEIGHT, 160))
 
-            // The strip is a right-hand column; rotate is its bottom-most cell.
+            // The strip is a right-hand column; rotate is its bottom-most cell. One tap is all it
+            // takes: it turns the screen, and with "Lock landscape" off auto-rotate comes back.
             callback.onClick(WIDTH - THICKNESS / 2f, HEIGHT - THICKNESS / 2f)
             assertEquals(0, autoRotate())
             assertEquals(Surface.ROTATION_90, userRotation())
 
-            // With "Lock landscape" off, a second press gives the phone its own rotation back.
-            callback.onClick(WIDTH - THICKNESS / 2f, HEIGHT - THICKNESS / 2f)
+            Thread.sleep(1200)
             assertEquals(1, autoRotate())
             assertEquals(Surface.ROTATION_0, userRotation())
         } finally {

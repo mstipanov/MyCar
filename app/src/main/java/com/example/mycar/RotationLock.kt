@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings as AndroidSettings
 import android.util.Log
 import android.view.Display
@@ -26,6 +28,14 @@ object RotationLock {
     private const val TAG = "RotationLock"
     private const val USER_ROTATION = "user_rotation"
 
+    /** How long a one-shot rotation is forced before auto-rotate is handed back. */
+    private const val ONE_SHOT_HOLD_MS = 700L
+
+    private val handler = Handler(Looper.getMainLooper())
+
+    /** Invalidates a pending one-shot restore when a newer action takes over. */
+    private var oneShotGeneration = 0
+
     /** Whether the user has granted "Modify system settings". */
     fun isAllowed(context: Context): Boolean = AndroidSettings.System.canWrite(context)
 
@@ -43,6 +53,7 @@ object RotationLock {
      */
     fun lockLandscape(context: Context): Boolean {
         if (!isAllowed(context)) return false
+        oneShotGeneration++
         val resolver = context.contentResolver
         rememberRotation(context, resolver)
 
@@ -61,46 +72,91 @@ object RotationLock {
     }
 
     /**
-     * The car launcher's rotate button.
+     * The car launcher's rotate button: it only turns the screen. Whether that orientation stays
+     * locked is decided by "Lock landscape", not by the button.
      *
-     * The first press forces the display to the opposite orientation, which requires turning
-     * auto-rotate off so the phone does not immediately flip back; [unlock] restores the user's
-     * own setting when mirroring stops. While "Lock landscape" is off, pressing the button again
-     * *releases* that hold instead of pinning the other orientation, so the button never leaves
-     * the phone's rotation locked behind the user's back. With "Lock landscape" on, every press
-     * only flips between portrait and landscape, because the user asked for the lock to last the
-     * whole session. False without the required access.
+     * - With "Lock landscape" on, the rotation is forced and held for the session (auto-rotate
+     *   stays off until [unlock]).
+     * - With it off, the button forces the new orientation just long enough for the display to
+     *   take it, then hands auto-rotate back. If the user already keeps auto-rotate off
+     *   themselves, it simply changes their orientation and leaves their setting alone.
+     *
+     * False (and nothing changes) without the required access.
      */
     fun togglePortraitLandscape(context: Context): Boolean {
         if (!isAllowed(context)) return false
         val prefs = Settings.prefs(context)
-        if (prefs.contains(Settings.KEY_AUTOROTATE_BACKUP) && !Settings.lockLandscape(context)) {
-            unlock(context)
-            return true
+        val resolver = context.contentResolver
+        val next = nextOrientation(context)
+
+        if (Settings.lockLandscape(context)) {
+            rememberRotation(context, resolver)
+            oneShotGeneration++
+            return setRotation(resolver, next)
         }
 
-        val resolver = context.contentResolver
-        rememberRotation(context, resolver)
-
-        // Base the toggle on the display's *actual* rotation, not `user_rotation`: with auto-rotate
-        // on (the default, since "lock landscape" is off) `user_rotation` goes stale, so the first
-        // tap would pick the orientation the phone already has and look like it did nothing.
-        val current = displayRotation(context)
-        val landscape = current == Surface.ROTATION_90 || current == Surface.ROTATION_270
-        val next = if (landscape) Surface.ROTATION_0 else Surface.ROTATION_90
-
-        return try {
-            AndroidSettings.System.putInt(
+        // A backup means MyCar is (or was) holding the rotation. Its stored auto-rotate value is
+        // the user's own: 1 means the rotation is only a one-shot and must be given back; 0 means
+        // the user runs their rotation manually and a plain orientation change is all they want.
+        val autoRotateBefore = if (prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)) {
+            prefs.getInt(Settings.KEY_AUTOROTATE_BACKUP, 1)
+        } else {
+            AndroidSettings.System.getInt(
                 resolver,
                 AndroidSettings.System.ACCELEROMETER_ROTATION,
-                0,
+                1,
             )
-            AndroidSettings.System.putInt(resolver, USER_ROTATION, next)
-            true
-        } catch (t: Throwable) {
-            Log.w(TAG, "Could not rotate the display", t)
-            false
         }
+
+        if (autoRotateBefore == 0) {
+            // Drop any hold left by the lock option, then just change the orientation.
+            if (prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)) unlock(context)
+            return setUserRotation(resolver, next)
+        }
+
+        // Auto-rotate was on: force the new orientation long enough to be applied, then give
+        // auto-rotate back. The backup keeps a killed process from leaving the phone pinned, and
+        // the generation check means a newer press or `lockLandscape` cancels this restore.
+        rememberRotation(context, resolver)
+        if (!setRotation(resolver, next)) return false
+        oneShotGeneration++
+        val generation = oneShotGeneration
+        handler.postDelayed({
+            if (generation == oneShotGeneration && !Settings.lockLandscape(context)) {
+                unlock(context)
+            }
+        }, ONE_SHOT_HOLD_MS)
+        return true
+    }
+
+    /** The orientation a rotate press would switch to, based on what the display shows now. */
+    private fun nextOrientation(context: Context): Int {
+        val current = displayRotation(context)
+        val landscape = current == Surface.ROTATION_90 || current == Surface.ROTATION_270
+        return if (landscape) Surface.ROTATION_0 else Surface.ROTATION_90
+    }
+
+    /** Turns auto-rotate off and pins [next], which is what a held rotation needs. */
+    private fun setRotation(resolver: ContentResolver, next: Int): Boolean = try {
+        AndroidSettings.System.putInt(
+            resolver,
+            AndroidSettings.System.ACCELEROMETER_ROTATION,
+            0,
+        )
+        AndroidSettings.System.putInt(resolver, USER_ROTATION, next)
+        true
+    } catch (t: Throwable) {
+        Log.w(TAG, "Could not rotate the display", t)
+        false
+    }
+
+    /** Changes only the orientation, leaving the user's auto-rotate setting untouched. */
+    private fun setUserRotation(resolver: ContentResolver, next: Int): Boolean = try {
+        AndroidSettings.System.putInt(resolver, USER_ROTATION, next)
+        true
+    } catch (t: Throwable) {
+        Log.w(TAG, "Could not rotate the display", t)
+        false
     }
 
     /**
@@ -156,6 +212,7 @@ object RotationLock {
      * both the auto-rotate mode and the user's own orientation. No-op if we never changed them.
      */
     fun unlock(context: Context) {
+        oneShotGeneration++
         if (!isAllowed(context)) return
         val prefs = Settings.prefs(context)
         val hadAutoRotate = prefs.contains(Settings.KEY_AUTOROTATE_BACKUP)

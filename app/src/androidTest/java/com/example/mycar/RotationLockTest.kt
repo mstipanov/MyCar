@@ -15,10 +15,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The car launcher's rotate button must not leave the phone's rotation locked when the user did
- * not ask for "Lock landscape": the first press forces the opposite orientation, the second gives
- * auto-rotate (and the previous orientation) back. With the lock on, the hold stays for the whole
- * session.
+ * The car launcher's rotate button only turns the screen; "Lock landscape" decides whether the
+ * orientation is held. With the lock off, a press must hand auto-rotate (and the previous
+ * orientation) back on its own. With the lock on, the hold stays for the whole session.
  *
  * Runs only where "Modify system settings" has been granted (skip otherwise) and always restores
  * the device's values afterwards.
@@ -60,7 +59,7 @@ class RotationLockTest {
     }
 
     @Test
-    fun secondPressGivesRotationBackWhenLandscapeLockIsOff() {
+    fun lockOffHandsAutoRotateBackAfterTheTurn() {
         Settings.setLockLandscape(context, false)
         AndroidSettings.System.putInt(resolver, AndroidSettings.System.ACCELEROMETER_ROTATION, 1)
         AndroidSettings.System.putInt(resolver, USER_ROTATION, Surface.ROTATION_0)
@@ -69,9 +68,23 @@ class RotationLockTest {
         assertEquals(0, autoRotate())
         assertTrue(hasHold())
 
-        assertTrue(RotationLock.togglePortraitLandscape(context))
+        // The one-shot hold is short: auto-rotate must come back on its own.
+        Thread.sleep(1200)
         assertEquals(1, autoRotate())
         assertEquals(Surface.ROTATION_0, userRotation())
+        assertFalse(hasHold())
+    }
+
+    @Test
+    fun theUsersOwnAutoRotateOffIsLeftAlone() {
+        Settings.setLockLandscape(context, false)
+        AndroidSettings.System.putInt(resolver, AndroidSettings.System.ACCELEROMETER_ROTATION, 0)
+        AndroidSettings.System.putInt(resolver, USER_ROTATION, Surface.ROTATION_0)
+
+        assertTrue(RotationLock.togglePortraitLandscape(context))
+
+        assertEquals(0, autoRotate())
+        assertEquals(Surface.ROTATION_90, userRotation())
         assertFalse(hasHold())
     }
 

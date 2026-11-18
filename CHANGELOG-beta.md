@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.50-beta1
+- The car rotate button now only turns the screen; "Lock the screen to landscape while mirroring" decides whether that orientation is held. With the lock off, auto-rotate comes straight back after the turn
+
 ## 1.49-beta1
 - The car rotate button no longer leaves the phone's rotation locked: with "Lock the screen to landscape while mirroring" off, pressing it again hands orientation back to auto-rotate (or your own fixed orientation), and stopping mirroring still restores it
 

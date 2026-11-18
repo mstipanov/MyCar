@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.49
+- The car rotate button no longer leaves the phone's rotation locked: with "Lock the screen to landscape while mirroring" off, pressing it again hands orientation back to auto-rotate (or your own fixed orientation), and stopping mirroring still restores it
+
 ## 1.48
 - New Update channel choice in the Updates card: pick Stable for tested releases or Beta for early builds, and MyCar follows that channel from then on
 

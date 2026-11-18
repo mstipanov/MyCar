@@ -192,7 +192,10 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
   the mirror: a column on the right, or along the bottom while the media panel is open. The strip
   gets its own space, so it never covers the mirror. Tapping an icon opens that phone app (needs
   *Display over other apps*, or the MyCar accessibility service). A rotate button pinned to the
-  bottom flips the phone between portrait and landscape (needs *Modify system settings*).
+  bottom flips the phone between portrait and landscape (needs *Modify system settings*). With
+  *Lock the screen to landscape while mirroring* off, pressing it again releases the forced
+  rotation back to auto-rotate (or the phone's own fixed orientation) instead of leaving the
+  display pinned.
 * **Choose launcher apps** — pick which apps the strip shows and organise their order with up/down
   arrows (Google Maps and YouTube by default, plus the rotate button). Changes appear on the car
   launcher immediately.

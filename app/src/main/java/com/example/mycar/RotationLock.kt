@@ -61,13 +61,24 @@ object RotationLock {
     }
 
     /**
-     * Forces the display to the opposite orientation (portrait <-> landscape) for the car
-     * session, turning auto-rotate off, and remembers the previous auto-rotate value and
-     * orientation for [unlock]. This is what the car launcher's rotate button calls. False without
-     * the required access.
+     * The car launcher's rotate button.
+     *
+     * The first press forces the display to the opposite orientation, which requires turning
+     * auto-rotate off so the phone does not immediately flip back; [unlock] restores the user's
+     * own setting when mirroring stops. While "Lock landscape" is off, pressing the button again
+     * *releases* that hold instead of pinning the other orientation, so the button never leaves
+     * the phone's rotation locked behind the user's back. With "Lock landscape" on, every press
+     * only flips between portrait and landscape, because the user asked for the lock to last the
+     * whole session. False without the required access.
      */
     fun togglePortraitLandscape(context: Context): Boolean {
         if (!isAllowed(context)) return false
+        val prefs = Settings.prefs(context)
+        if (prefs.contains(Settings.KEY_AUTOROTATE_BACKUP) && !Settings.lockLandscape(context)) {
+            unlock(context)
+            return true
+        }
+
         val resolver = context.contentResolver
         rememberRotation(context, resolver)
 

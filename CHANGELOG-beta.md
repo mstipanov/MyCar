@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.49-beta1
+- The car rotate button no longer leaves the phone's rotation locked: with "Lock the screen to landscape while mirroring" off, pressing it again hands orientation back to auto-rotate (or your own fixed orientation), and stopping mirroring still restores it
+
 ## 1.48-beta2
 - New Update channel choice in the Updates card: pick Stable for tested releases or Beta for early builds, and MyCar follows that channel from then on
 

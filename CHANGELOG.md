@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.50
+- The car rotate button now only turns the screen; "Lock the screen to landscape while mirroring" decides whether that orientation is held. With the lock off, auto-rotate comes straight back after the turn
+
 ## 1.49
 - The car rotate button no longer leaves the phone's rotation locked: with "Lock the screen to landscape while mirroring" off, pressing it again hands orientation back to auto-rotate (or your own fixed orientation), and stopping mirroring still restores it
 

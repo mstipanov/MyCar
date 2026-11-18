@@ -1,5 +1,8 @@
 # MyCar
 
+## 1.48
+- New Update channel choice in the Updates card: pick Stable for tested releases or Beta for early builds, and MyCar follows that channel from then on
+
 ## 1.47
 - Fixed the phone staying locked in landscape after a mirroring session when auto-rotate was off: MyCar now restores the orientation it found instead of leaving its own behind
 - A landscape lock left behind by an interrupted session (an app update, a reboot, a force stop) is now cleared when MyCar starts

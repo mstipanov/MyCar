@@ -160,6 +160,11 @@ long as *Display over other apps* is granted (see [Hands-free start](#hands-free
 * **Lock the screen to landscape while mirroring** — forces the device rotation and turns
   auto-rotate off for the session. Needs the *Modify system settings* special access; your
   previous auto-rotate setting and orientation are restored when mirroring stops.
+* **Dim the phone screen while Android Auto is connected** — lowers the brightness to the minimum
+  while the car is connected, and restores the previous brightness and mode (manual or automatic)
+  when it disconnects. Touching the phone brings the brightness back; it dims again after 10
+  seconds without a touch. Needs *Modify system settings*; the touch wake-up needs the MyCar
+  accessibility service.
 * **Car screen scaling** — how the mirrored screen is fitted into the map area. *Fit* shows the
   whole phone screen with black bars; *Fill height* crops the sides (best full screen); *Fill
   width* crops the top and bottom (best when a side panel narrows the area); *Fill* (the default)

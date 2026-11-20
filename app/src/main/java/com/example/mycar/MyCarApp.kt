@@ -18,5 +18,8 @@ class MyCarApp : Application() {
         super.onCreate()
         AppCompatDelegate.setDefaultNightMode(Settings.themeMode(this).delegateMode)
         AnnouncementPauser.start(this)
+        // Clear a brightness dim left behind if the process died mid-session (an update, a crash)
+        // and Android Auto is no longer projecting. If it still is, the watcher re-dims.
+        ScreenDimmer.restoreIfIdle(this)
     }
 }

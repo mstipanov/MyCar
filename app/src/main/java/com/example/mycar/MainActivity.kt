@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var updateStatusView: TextView
     private lateinit var keepScreenOnView: CheckBox
     private lateinit var lockLandscapeView: CheckBox
+    private lateinit var dimScreenView: CheckBox
     private lateinit var touchControlView: CheckBox
     private lateinit var quickLaunchView: CheckBox
     private lateinit var manageLauncherAppsButton: Button
@@ -77,7 +78,7 @@ class MainActivity : AppCompatActivity() {
     /** Ensures the "Display over other apps" screen is only sent to once per activity. */
     private var overlayPrompted = false
 
-    /** Ensures the "Modify system settings" screen (needed by the rotate button) is sent to once. */
+    /** Ensures the "Modify system settings" screen (rotation lock, dimming) is sent to once. */
     private var writeSettingsPrompted = false
 
     private val requestProjection =
@@ -135,6 +136,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
         lockLandscapeView.isChecked = Settings.lockLandscape(this)
+
+        dimScreenView = findViewById(R.id.dim_screen)
+        dimScreenView.isChecked = Settings.dimScreen(this)
+        dimScreenView.setOnCheckedChangeListener { _, checked ->
+            Settings.setDimScreen(this, checked)
+            if (checked && !WriteSettings.isAllowed(this)) {
+                startActivity(WriteSettings.permissionIntent(this))
+            }
+            ScreenDimmer.onSettingChanged(this)
+            syncWatcher()
+        }
 
         // Scaling is read by the renderer every frame, so a change here applies immediately.
         val scaleGroup = findViewById<RadioGroup>(R.id.scale_group)
@@ -342,6 +354,19 @@ class MainActivity : AppCompatActivity() {
             // process was killed by an update, say), which is why the phone could stay in
             // landscape even with "lock landscape" off.
             RotationLock.unlock(this)
+        }
+
+        // The phone UI being in front means someone is using the phone: bring the brightness
+        // back (and let it dim again after the timeout) or restore a leftover dim on the way out.
+        if (CarConnectionWatcher.isProjecting(this)) {
+            if (dimScreenView.isChecked) {
+                ScreenDimmer.onConnected(this)
+                ScreenDimmer.onUserTouch(this)
+            } else {
+                ScreenDimmer.onSettingChanged(this)
+            }
+        } else {
+            ScreenDimmer.restoreIfIdle(this)
         }
         updateTouchControlUi()
         updateNotificationAccessUi()

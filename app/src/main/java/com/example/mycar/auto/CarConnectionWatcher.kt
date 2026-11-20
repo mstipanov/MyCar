@@ -21,6 +21,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.mycar.MainActivity
 import com.example.mycar.R
+import com.example.mycar.ScreenDimmer
 import com.example.mycar.Settings
 import com.example.mycar.capture.ScreenMirrorService
 import com.example.mycar.launch.AppCloser
@@ -97,6 +98,9 @@ class CarConnectionWatcher : Service() {
         // say when that becomes true. Only the system sends them, so this receiver is not exported.
         unlockReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
+                // Picking the phone up (screen on / unlock) means it is about to be used, so a
+                // dimmed screen must show its brightness immediately.
+                ScreenDimmer.onUserTouch(this@CarConnectionWatcher)
                 // Android Auto's state is only acted on once the phone is unlocked, which is also
                 // when a rising edge missed while locked can be caught up on.
                 if (readyForConsent(this@CarConnectionWatcher)) queryConnection()
@@ -123,6 +127,7 @@ class CarConnectionWatcher : Service() {
         receiver = null
         unlockReceiver?.let { runCatching { unregisterReceiver(it) } }
         unlockReceiver = null
+        ScreenDimmer.onDisconnected(this)
         super.onDestroy()
     }
 
@@ -135,8 +140,14 @@ class CarConnectionWatcher : Service() {
         val was = wasConnected
         wasConnected = connected
         when {
-            connected && !was -> startMirroring()
-            !connected && was -> onDisconnected()
+            connected && !was -> {
+                ScreenDimmer.onConnected(this)
+                startMirroring()
+            }
+            !connected && was -> {
+                ScreenDimmer.onDisconnected(this)
+                onDisconnected()
+            }
         }
     }
 
@@ -319,7 +330,8 @@ class CarConnectionWatcher : Service() {
          */
         fun wanted(context: Context): Boolean =
             (Settings.autoStart(context) && android.provider.Settings.canDrawOverlays(context)) ||
-                Settings.closeAppOnDisconnect(context)
+                Settings.closeAppOnDisconnect(context) ||
+                Settings.dimScreen(context)
 
         /** Idempotently starts the watcher. */
         fun start(context: Context) {

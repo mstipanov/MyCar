@@ -10,6 +10,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.example.mycar.ScreenDimmer
 import com.example.mycar.Settings
 
 /**
@@ -23,6 +24,8 @@ import com.example.mycar.Settings
  *   it by driving the app-info screen (`canRetrieveWindowContent`).
  * - Report the bounds of a floating Picture-in-Picture window, so a car drag can be anchored there
  *   and grab the window instead of the app behind it (`flagRetrieveInteractiveWindows`).
+ * - Notice screen touches while the phone is dimmed for Android Auto, so the brightness comes
+ *   back when the user picks the phone up.
  *
  * A normal app cannot synthesize input for other apps; an accessibility service with gestures is
  * one of the two supported routes (root is the other). This service acts only when
@@ -61,6 +64,10 @@ class TouchInjectorService : AccessibilityService() {
         // A PiP window can appear, move or close at any time; a windows-changed event is when the
         // reported bounds change, so that is when the cache is refreshed.
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) refreshPictureInPicture()
+        // A touch on the phone should wake a screen dimmed for the car.
+        if (event?.eventType == AccessibilityEvent.TYPE_TOUCH_INTERACTION_START) {
+            ScreenDimmer.onUserTouch(this)
+        }
         autoAcceptCapturePrompt(event)
         driveForceStop(event)
     }

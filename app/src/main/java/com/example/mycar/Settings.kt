@@ -11,6 +11,7 @@ object Settings {
     const val PREFS_NAME = "settings"
     const val KEY_KEEP_SCREEN_ON = "keepScreenOn"
     const val KEY_LOCK_LANDSCAPE = "lockLandscape"
+    const val KEY_DIM_SCREEN = "dimScreen"
     const val KEY_TOUCH_CONTROL = "touchControl"
     const val KEY_AUTO_START = "autoStart"
     const val KEY_START_APP_PACKAGE = "startAppPackage"
@@ -35,6 +36,10 @@ object Settings {
 
     /** Remembers the user's own orientation while we force landscape (auto-rotate off). */
     const val KEY_USER_ROTATION_BACKUP = "userRotationBackup"
+
+    /** Remembers the user's brightness and mode while the screen is dimmed. */
+    const val KEY_BRIGHTNESS_BACKUP = "brightnessBackup"
+    const val KEY_BRIGHTNESS_MODE_BACKUP = "brightnessModeBackup"
 
     /**
      * Which theme to use: follow the system, or force light/dark. Default is the system setting.
@@ -91,6 +96,17 @@ object Settings {
 
     fun setLockLandscape(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_LOCK_LANDSCAPE, enabled).apply()
+    }
+
+    /**
+     * Whether the phone screen should be dimmed to its minimum while Android Auto is connected.
+     * Touching the phone brings the brightness back; it dims again after a timeout.
+     */
+    fun dimScreen(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_DIM_SCREEN, false)
+
+    fun setDimScreen(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_DIM_SCREEN, enabled).apply()
     }
 
     /**

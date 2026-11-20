@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings as AndroidSettings
@@ -37,14 +36,10 @@ object RotationLock {
     private var oneShotGeneration = 0
 
     /** Whether the user has granted "Modify system settings". */
-    fun isAllowed(context: Context): Boolean = AndroidSettings.System.canWrite(context)
+    fun isAllowed(context: Context): Boolean = WriteSettings.isAllowed(context)
 
     /** The Settings screen where the user grants that access. */
-    fun permissionIntent(context: Context): Intent =
-        Intent(
-            AndroidSettings.ACTION_MANAGE_WRITE_SETTINGS,
-            Uri.parse("package:${context.packageName}"),
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    fun permissionIntent(context: Context): Intent = WriteSettings.permissionIntent(context)
 
     /**
      * Turns auto-rotate off and rotates to landscape, remembering the previous auto-rotate value

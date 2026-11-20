@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.example.mycar.RotationLock
+import com.example.mycar.ScreenDimmer
 import com.example.mycar.Settings
 import com.example.mycar.audio.AnnouncementPauser
 import com.example.mycar.car.CarCategory
@@ -27,6 +28,7 @@ class RestartReceiver : BroadcastReceiver() {
                 // rotation cleanup. Put the phone's own rotation settings back before anything
                 // else; if auto-start locks landscape again, it does so from scratch.
                 RotationLock.unlock(context)
+                ScreenDimmer.restoreIfIdle(context)
                 restoreWatcher(context)
             }
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
@@ -35,6 +37,7 @@ class RestartReceiver : BroadcastReceiver() {
                 CarCategory.register(context, Settings.carCategory(context))
                 AnnouncementPauser.start(context)
                 RotationLock.unlock(context)
+                ScreenDimmer.restoreIfIdle(context)
                 restoreWatcher(context)
             }
         }

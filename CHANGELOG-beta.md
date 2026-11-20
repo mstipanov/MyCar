@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable channel. The app is the same package, so
 installing a beta replaces the stable build on your phone.
 
+## 1.51-beta1
+- New "Dim the phone screen while Android Auto is connected" option: the phone drops to the minimum brightness in the car and restores your own brightness and auto-brightness setting when Android Auto disconnects
+- Touching the phone while it is dimmed brings the brightness back, and it dims again after 10 seconds without touches. Needs "Modify system settings"; touch detection needs the MyCar accessibility service
+
 ## 1.50-beta1
 - The car rotate button now only turns the screen; "Lock the screen to landscape while mirroring" decides whether that orientation is held. With the lock off, auto-rotate comes straight back after the turn
 

@@ -86,6 +86,16 @@
                     android:layout_height="wrap_content"
                     android:text="@string/lock_landscape" />
 
+                <CheckBox
+                    android:id="@+id/dim_screen"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dim_screen" />
+
+                <TextView
+                    style="@style/MyCar.Hint"
+                    android:text="@string/dim_screen_hint" />
+
                 <TextView
                     style="@style/MyCar.FieldLabel"
                     android:text="@string/scale_mode" />
